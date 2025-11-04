@@ -15,14 +15,17 @@
                     <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                         {{ __('Panel') }}
                     </x-nav-link>
-                    <x-nav-link :href="route('dependencias.index')" :active="request()->routeIs('dependencias.*')">
-                        {{ __('Dependencias') }}
+                    <x-nav-link :href="route('entidades-procedencia')" :active="request()->routeIs('entidades-procedencia')">
+                        {{ __('Entidades de Procedencia') }}
                     </x-nav-link>
-                    <x-nav-link :href="route('tramites')" :active="request()->routeIs('tramites')">
-                        {{ __('Trámites') }}
+                    <x-nav-link :href="route('coordinaciones')" :active="request()->routeIs('coordinaciones')">
+                        {{ __('Coordinaciones') }}
                     </x-nav-link>
-                    <x-nav-link :href="route('lineas-captura')" :active="request()->routeIs('lineas-captura')">
-                        {{ __('Líneas de captura') }}
+                    <x-nav-link :href="route('servicios')" :active="request()->routeIs('servicios')">
+                        {{ __('Servicios') }}
+                    </x-nav-link>
+                    <x-nav-link :href="route('solicitudes')" :active="request()->routeIs('solicitudes')">
+                        {{ __('Solicitudes') }}
                     </x-nav-link>
                 </div>
             </div>
@@ -79,14 +82,17 @@
             <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                 {{ __('Panel') }}
             </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('dependencias.index')" :active="request()->routeIs('dependencias.*')">
-                    {{ __('Dependencias') }}
-                </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('tramites')" :active="request()->routeIs('tramites')">
-                {{ __('Trámites') }}
+            <x-responsive-nav-link :href="route('coordinaciones')" :active="request()->routeIs('coordinaciones')">
+                {{ __('Coordinaciones') }}
             </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('lineas-captura')" :active="request()->routeIs('lineas-captura')">
-                {{ __('Líneas de captura') }}
+            <x-responsive-nav-link :href="route('entidades-procedencia')" :active="request()->routeIs('entidades-procedencia')">
+                {{ __('Entidades de Procedencia') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('servicios')" :active="request()->routeIs('servicios')">
+                {{ __('Servicios') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('solicitudes')" :active="request()->routeIs('solicitudes')">
+                {{ __('Solicitudes') }}
             </x-responsive-nav-link>
         </div>
 

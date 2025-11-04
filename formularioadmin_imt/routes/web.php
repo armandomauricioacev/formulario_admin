@@ -2,7 +2,6 @@
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\AdminController;
-use App\Http\Controllers\ExcelController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -42,9 +41,7 @@ Route::put('/tramites/{tramite}', [AdminController::class, 'tramitesUpdate'])
 Route::delete('/tramites/{tramite}', [AdminController::class, 'tramitesDestroy'])
     ->middleware(['auth', 'verified'])->name('tramites.destroy');
 
-// ========== RUTAS DE EXCEL ==========
-Route::post('/excel/upload-tramites', [ExcelController::class, 'uploadTramites'])
-    ->middleware(['auth', 'verified'])->name('excel.upload-tramites');
+
 
 // ========== RUTAS DE LÍNEAS DE CAPTURA ==========
 Route::get('/lineas-captura', [AdminController::class, 'lineasCapturadasIndex'])
@@ -58,6 +55,47 @@ Route::delete('/lineas-captura/delete-filtered', [AdminController::class, 'linea
 // Ruta para eliminar línea individual
 Route::delete('/lineas-captura/{linea}', [AdminController::class, 'lineaCapturaDestroy'])
     ->middleware(['auth', 'verified'])->name('lineas-captura.destroy');
+
+// ========== RUTAS DE COORDINACIONES ==========
+Route::get('/coordinaciones', [AdminController::class, 'coordinacionesIndex'])
+    ->middleware(['auth', 'verified'])->name('coordinaciones');
+
+Route::post('/coordinaciones', [AdminController::class, 'coordinacionesStore'])
+    ->middleware(['auth', 'verified'])->name('coordinaciones.store');
+
+Route::put('/coordinaciones/{coordinacion}', [AdminController::class, 'coordinacionesUpdate'])
+    ->middleware(['auth', 'verified'])->name('coordinaciones.update');
+
+Route::delete('/coordinaciones/{coordinacion}', [AdminController::class, 'coordinacionesDestroy'])
+    ->middleware(['auth', 'verified'])->name('coordinaciones.destroy');
+
+// ========== RUTAS DE ENTIDADES DE PROCEDENCIA ==========
+Route::get('/entidades-procedencia', [AdminController::class, 'entidadesProcedenciaIndex'])
+    ->middleware(['auth', 'verified'])->name('entidades-procedencia');
+
+Route::post('/entidades-procedencia', [AdminController::class, 'entidadesProcedenciaStore'])
+    ->middleware(['auth', 'verified'])->name('entidades-procedencia.store');
+
+Route::put('/entidades-procedencia/{entidad}', [AdminController::class, 'entidadesProcedenciaUpdate'])
+    ->middleware(['auth', 'verified'])->name('entidades-procedencia.update');
+
+Route::delete('/entidades-procedencia/{entidad}', [AdminController::class, 'entidadesProcedenciaDestroy'])
+    ->middleware(['auth', 'verified'])->name('entidades-procedencia.destroy');
+
+Route::get('/servicios', [AdminController::class, 'serviciosIndex'])
+    ->middleware(['auth', 'verified'])->name('servicios');
+
+Route::post('/servicios', [AdminController::class, 'serviciosStore'])
+    ->middleware(['auth', 'verified'])->name('servicios.store');
+
+Route::put('/servicios/{servicio}', [AdminController::class, 'serviciosUpdate'])
+    ->middleware(['auth', 'verified'])->name('servicios.update');
+
+Route::delete('/servicios/{servicio}', [AdminController::class, 'serviciosDestroy'])
+    ->middleware(['auth', 'verified'])->name('servicios.destroy');
+
+Route::get('/solicitudes', [AdminController::class, 'solicitudesServiciosIndex'])
+    ->middleware(['auth', 'verified'])->name('solicitudes');
 
 // ========== RUTAS DE PERFIL ==========
 Route::middleware('auth')->group(function () {

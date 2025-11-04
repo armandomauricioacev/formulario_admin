@@ -2,467 +2,337 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Dependencia;
-use App\Models\Tramite;
-use App\Models\LineaCapturada;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
+use App\Models\Coordinaciones;
+use App\Models\EntidadesProcedencia;
+use App\Models\Servicios;
+use App\Models\SolicitudesServicio;
 
 class AdminController extends Controller
 {
-    // =====================================
-    // DEPENDENCIAS
-    // =====================================
-
-    /**
-     * Listado de dependencias.
-     *
-     * @return \Illuminate\View\View Vista con paginación de dependencias.
-     */
+    // ========== MÉTODOS EXISTENTES (STUB) ==========
     public function dependenciasIndex()
     {
-        $dependencias = Dependencia::select('id','nombre','clave_dependencia','unidad_administrativa','created_at','updated_at')
-            ->paginate(10);
-
-        return view('dependencia', compact('dependencias'));
+        // Método stub para evitar errores
+        return view('dashboard');
     }
 
-    /**
-     * Crea una nueva dependencia.
-     *
-     * @param Request $request Datos validados del formulario.
-     * @return \Illuminate\Http\RedirectResponse Redirección con mensaje de éxito.
-     */
     public function dependenciaStore(Request $request)
     {
-        $validated = $request->validate([
-            'nombre' => ['required','string','max:255'],
-            'clave_dependencia' => ['required','string','max:255'],
-            'unidad_administrativa' => ['nullable','string','max:255'],
-        ]);
-
-        Dependencia::create($validated);
-        Cache::forget('dependencias:list');
-
-        return redirect()->route('dependencias.index')->with('success', 'Dependencia creada correctamente.');
+        // Método stub para evitar errores
+        return redirect()->back();
     }
 
-    /**
-     * Actualiza una dependencia.
-     *
-     * @param Request $request Datos a actualizar.
-     * @param Dependencia $dependencia Modelo a modificar.
-     * @return \Illuminate\Http\RedirectResponse Redirección con mensaje de éxito.
-     */
-    public function dependenciaUpdate(Request $request, Dependencia $dependencia)
+    public function dependenciaUpdate(Request $request, $dependencia)
     {
-        $validated = $request->validate([
-            'nombre' => ['required','string','max:255'],
-            'clave_dependencia' => ['required','string','max:255'],
-            'unidad_administrativa' => ['nullable','string','max:255'],
-        ]);
-
-        $dependencia->update($validated);
-        Cache::forget('dependencias:list');
-
-        return redirect()->route('dependencias.index')->with('success', 'Dependencia actualizada correctamente.');
+        // Método stub para evitar errores
+        return redirect()->back();
     }
 
-    /**
-     * Elimina una dependencia.
-     *
-     * @param Dependencia $dependencia Modelo a eliminar.
-     * @return \Illuminate\Http\RedirectResponse Redirección con mensaje de éxito.
-     */
-    public function dependenciaDestroy(Dependencia $dependencia)
+    public function dependenciaDestroy($dependencia)
     {
-        $dependencia->delete();
-        Cache::forget('dependencias:list');
-
-        return redirect()->route('dependencias.index')->with('success', 'Dependencia eliminada correctamente.');
+        // Método stub para evitar errores
+        return redirect()->back();
     }
 
-    // =====================================
-    // TRÁMITES
-    // =====================================
-
-    /**
-     * Listado de trámites.
-     *
-     * @return \Illuminate\View\View Vista con trámites ordenados.
-     */
     public function tramitesIndex()
     {
-        $tramites = Tramite::select(
-            'id',
-            'clave_dependencia_siglas',
-            'clave_tramite',
-            'variante',
-            'descripcion',
-            'tramite_usoreservado',
-            'fundamento_legal',
-            'vigencia_tramite_de',
-            'vigencia_tramite_al',
-            'vigencia_lineacaptura',
-            'tipo_vigencia',
-            'clave_contable',
-            'obligatorio',
-            'agrupador',
-            'tipo_agrupador',
-            'clave_periodicidad',
-            'clave_periodo',
-            'nombre_monto',
-            'variable',
-            'cuota',
-            'iva',
-            'monto_iva',
-            'actualizacion',
-            'recargos',
-            'multa_correccionfiscal',
-            'compensacion',
-            'saldo_favor',
-            'created_at',
-            'updated_at'
-        )
-        ->orderBy('id', 'desc')
-        ->get();
-
-        return view('tramites', compact('tramites'));
+        // Método stub para evitar errores
+        return view('dashboard');
     }
 
-    /**
-     * Crea un trámite.
-     *
-     * @param Request $request Datos del trámite.
-     * @return \Illuminate\Http\RedirectResponse Redirección con mensaje de éxito.
-     */
     public function tramitesStore(Request $request)
     {
-        $validated = $request->validate([
-            'clave_dependencia_siglas' => ['required','string','max:255'],
-            'clave_tramite' => ['required','string','max:255'],
-            'variante' => ['nullable','numeric'],
-            'descripcion' => ['required','string'],
-            'tramite_usoreservado' => ['nullable','string'],
-            'fundamento_legal' => ['nullable','string'],
-            'vigencia_tramite_de' => ['nullable','date'],
-            'vigencia_tramite_al' => ['nullable','date'],
-            'vigencia_lineacaptura' => ['nullable','numeric'],
-            'tipo_vigencia' => ['nullable','string','max:5'],
-            'clave_contable' => ['nullable','string','max:255'],
-            'obligatorio' => ['nullable','in:S,N'],
-            'agrupador' => ['nullable','string','max:255'],
-            'tipo_agrupador' => ['nullable','string','max:5'],
-            'clave_periodicidad' => ['nullable','string','max:5'],
-            'clave_periodo' => ['nullable','string','max:10'],
-            'nombre_monto' => ['nullable','string','max:255'],
-            'variable' => ['nullable','in:S,N'],
-            'cuota' => ['nullable','numeric'],
-            'iva' => ['nullable','in:0,1'],
-            'monto_iva' => ['nullable','numeric'],
-            'actualizacion' => ['nullable','in:S,N'],
-            'recargos' => ['nullable','in:S,N'],
-            'multa_correccionfiscal' => ['nullable','in:S,N'],
-            'compensacion' => ['nullable','in:S,N'],
-            'saldo_favor' => ['nullable','in:S,N'],
-        ]);
-
-        Tramite::create($validated);
-        Cache::forget('tramites:list');
-
-        return redirect()->route('tramites')->with('success', 'Trámite creado correctamente.');
+        // Método stub para evitar errores
+        return redirect()->back();
     }
 
-    /**
-     * Actualiza un trámite.
-     *
-     * @param Request $request Campos a actualizar.
-     * @param Tramite $tramite Modelo a modificar.
-     * @return \Illuminate\Http\RedirectResponse Redirección con mensaje de éxito.
-     */
-    public function tramitesUpdate(Request $request, Tramite $tramite)
+    public function tramitesEdit($tramite)
     {
-        $validated = $request->validate([
-            'clave_dependencia_siglas' => ['nullable','string','max:255'],
-            'clave_tramite' => ['nullable','string','max:255'],
-            'variante' => ['nullable','numeric'],
-            'descripcion' => ['nullable','string'],
-            'tramite_usoreservado' => ['nullable','string'],
-            'fundamento_legal' => ['nullable','string'],
-            'vigencia_tramite_de' => ['nullable','date'],
-            'vigencia_tramite_al' => ['nullable','date'],
-            'vigencia_lineacaptura' => ['nullable','numeric'],
-            'tipo_vigencia' => ['nullable','string','max:5'],
-            'clave_contable' => ['nullable','string','max:255'],
-            'obligatorio' => ['nullable','in:S,N'],
-            'agrupador' => ['nullable','string','max:255'],
-            'tipo_agrupador' => ['nullable','string','max:5'],
-            'clave_periodicidad' => ['nullable','string','max:5'],
-            'clave_periodo' => ['nullable','string','max:10'],
-            'nombre_monto' => ['nullable','string','max:255'],
-            'variable' => ['nullable','in:S,N'],
-            'cuota' => ['nullable','numeric'],
-            'iva' => ['nullable','in:0,1'],
-            'monto_iva' => ['nullable','numeric'],
-            'actualizacion' => ['nullable','in:S,N'],
-            'recargos' => ['nullable','in:S,N'],
-            'multa_correccionfiscal' => ['nullable','in:S,N'],
-            'compensacion' => ['nullable','in:S,N'],
-            'saldo_favor' => ['nullable','in:S,N'],
-        ]);
-
-        $tramite->update($validated);
-        Cache::forget('tramites:list');
-
-        return redirect()->route('tramites')->with('success', 'Trámite actualizado correctamente.');
+        // Método stub para evitar errores
+        return view('dashboard');
     }
 
-    /**
-     * Devuelve datos de un trámite para edición (JSON).
-     *
-     * @param Tramite $tramite Modelo a consultar.
-     * @return \Illuminate\Http\JsonResponse Campos habilitados para edición.
-     */
-    public function tramitesEdit(Tramite $tramite)
+    public function tramitesUpdate(Request $request, $tramite)
     {
-        return response()->json($tramite->only([
-            'id',
-            'clave_dependencia_siglas',
-            'clave_tramite',
-            'variante',
-            'descripcion',
-            'tramite_usoreservado',
-            'fundamento_legal',
-            'vigencia_tramite_de',
-            'vigencia_tramite_al',
-            'vigencia_lineacaptura',
-            'tipo_vigencia',
-            'clave_contable',
-            'obligatorio',
-            'agrupador',
-            'tipo_agrupador',
-            'clave_periodicidad',
-            'clave_periodo',
-            'nombre_monto',
-            'variable',
-            'cuota',
-            'iva',
-            'monto_iva',
-            'actualizacion',
-            'recargos',
-            'multa_correccionfiscal',
-            'compensacion',
-            'saldo_favor',
-        ]));
+        // Método stub para evitar errores
+        return redirect()->back();
     }
 
-    /**
-     * Elimina un trámite.
-     *
-     * @param Tramite $tramite Modelo a eliminar.
-     * @return \Illuminate\Http\RedirectResponse Redirección con mensaje de éxito.
-     */
-    public function tramitesDestroy(Tramite $tramite)
+    public function tramitesDestroy($tramite)
     {
-        $tramite->delete();
-        Cache::forget('tramites:list');
-
-        return redirect()->route('tramites')->with('success', 'Trámite eliminado correctamente.');
+        // Método stub para evitar errores
+        return redirect()->back();
     }
 
-    // =====================================
-    // LÍNEAS DE CAPTURA
-    // =====================================
-
-    /**
-     * Listado de líneas de captura con filtros aplicados.
-     *
-     * @param Request $request Filtros y orden.
-     * @return \Illuminate\View\View Vista con resultados y total.
-     */
-    public function lineasCapturadasIndex(Request $request)
+    public function lineasCapturadasIndex()
     {
-        $query = LineaCapturada::select(
-            'id',
-            'tipo_persona',
-            'curp',
-            'rfc',
-            'razon_social',
-            'nombres',
-            'apellido_paterno',
-            'apellido_materno',
-            'dependencia_id',
-            'tramite_id',
-            'detalle_tramites_snapshot',
-            'solicitud',
-            'importe_cuota',
-            'importe_iva',
-            'importe_total',
-            'json_generado',
-            'estado_pago',
-            'fecha_solicitud',
-            'fecha_vigencia',
-            'created_at',
-            'updated_at',
-            'json_recibido',
-            'id_documento',
-            'tipo_pago',
-            'html_codificado',
-            'resultado',
-            'linea_captura',
-            'importe_sat',
-            'fecha_vigencia_sat',
-            'errores_sat',
-            'fecha_respuesta_sat',
-            'procesado_exitosamente'
-        );
-
-        // Aplicar filtros si existen en la solicitud
-        if ($request->filled('tipo_persona')) {
-            $query->where('tipo_persona', $request->tipo_persona);
-        }
-
-        if ($request->filled('estado_pago')) {
-            $query->where('estado_pago', $request->estado_pago);
-        }
-
-        if ($request->filled('importe_min')) {
-            $query->where('importe_total', '>=', $request->importe_min);
-        }
-
-        if ($request->filled('importe_max')) {
-            $query->where('importe_total', '<=', $request->importe_max);
-        }
-
-        if ($request->filled('fecha_desde')) {
-            $query->whereDate('fecha_solicitud', '>=', $request->fecha_desde);
-        }
-
-        if ($request->filled('fecha_hasta')) {
-            $query->whereDate('fecha_solicitud', '<=', $request->fecha_hasta);
-        }
-
-        // Búsqueda general
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->where('solicitud', 'like', "%{$search}%")
-                  ->orWhere('rfc', 'like', "%{$search}%")
-                  ->orWhere('curp', 'like', "%{$search}%")
-                  ->orWhere('nombres', 'like', "%{$search}%")
-                  ->orWhere('apellido_paterno', 'like', "%{$search}%")
-                  ->orWhere('apellido_materno', 'like', "%{$search}%")
-                  ->orWhere('razon_social', 'like', "%{$search}%");
-            });
-        }
-
-        // Obtener el total de líneas antes de aplicar filtros
-        $totalLineas = LineaCapturada::count();
-
-        // Aplicar ordenamiento según el parámetro
-        $orden = $request->get('orden', 'recientes');
-        if ($orden === 'antiguas') {
-            $lineas = $query->orderBy('id', 'asc')->get();
-        } else {
-            // Por defecto: más recientes (por fecha_solicitud desc y luego por ID desc)
-            $lineas = $query->orderBy('fecha_solicitud', 'desc')
-                           ->orderBy('id', 'desc')
-                           ->get();
-        }
-
-        return view('lineas-captura', compact('lineas', 'totalLineas'));
+        // Método stub para evitar errores
+        return view('dashboard');
     }
 
-    /**
-     * Elimina una línea de captura individual.
-     *
-     * @param LineaCapturada $linea Modelo a eliminar.
-     * @return \Illuminate\Http\RedirectResponse Redirección con mensaje de éxito.
-     */
-    public function lineaCapturaDestroy(LineaCapturada $linea)
-    {
-        $linea->delete();
-
-        return redirect()->route('lineas-captura')->with('success', 'Línea de captura eliminada correctamente.');
-    }
-
-    /**
-     * Elimina líneas de captura por filtros múltiples.
-     * Solo se ejecuta cuando hay filtros activos.
-     *
-     * @param Request $request Filtros a aplicar.
-     * @return \Illuminate\Http\RedirectResponse Redirección con conteo o error.
-     */
     public function lineasCapturaDeleteFiltered(Request $request)
     {
-        $validated = $request->validate([
-            'tipo_persona' => ['nullable', 'in:F,M'],
-            'estado_pago' => ['nullable', 'string'],
-            'importe_min' => ['nullable', 'numeric'],
-            'importe_max' => ['nullable', 'numeric'],
-            'fecha_desde' => ['nullable', 'date'],
-            'fecha_hasta' => ['nullable', 'date'],
-            'search' => ['nullable', 'string'],
+        // Método stub para evitar errores
+        return redirect()->back();
+    }
+
+    public function lineaCapturaDestroy($linea)
+    {
+        // Método stub para evitar errores
+        return redirect()->back();
+    }
+
+    // ========== MÉTODOS PARA COORDINACIONES ==========
+    public function coordinacionesIndex()
+    {
+        $coordinaciones = Coordinaciones::orderBy('id', 'desc')->get();
+        return view('coordinacion', compact('coordinaciones'));
+    }
+
+    public function coordinacionesStore(Request $request)
+    {
+        $request->validate([
+            'nombre' => 'required|string|max:255',
+            'coordinador' => 'nullable|string|max:255',
+            'correo_coordinador' => 'nullable|email|max:255',
+            'asistente' => 'nullable|string|max:255',
+            'correo_asistente' => 'nullable|email|max:255',
+            'representante' => 'nullable|string|max:255',
+            'correo_representante' => 'nullable|email|max:255',
         ]);
 
-        $query = LineaCapturada::query();
-        $hasFilters = false;
+        try {
+            // Obtener valores globales actuales (si existen)
+            $globalRepresentante = Coordinaciones::whereNotNull('representante')->value('representante');
+            $globalCorreoRepresentante = Coordinaciones::whereNotNull('correo_representante')->value('correo_representante');
 
-        // Filtro tipo persona
-        if (!empty($validated['tipo_persona'])) {
-            $query->where('tipo_persona', $validated['tipo_persona']);
-            $hasFilters = true;
-        }
+            // Si se envía representante/correo, se actualiza de forma global
+            if ($request->filled('representante')) {
+                $globalRepresentante = $request->representante;
+                Coordinaciones::query()->update(['representante' => $globalRepresentante]);
+            }
+            if ($request->filled('correo_representante')) {
+                $globalCorreoRepresentante = $request->correo_representante;
+                Coordinaciones::query()->update(['correo_representante' => $globalCorreoRepresentante]);
+            }
 
-        // Filtro estado pago
-        if (!empty($validated['estado_pago'])) {
-            $query->where('estado_pago', $validated['estado_pago']);
-            $hasFilters = true;
-        }
+            // Crear registro con campos individuales + globales (si existen)
+            Coordinaciones::create([
+                'nombre' => $request->nombre,
+                'coordinador' => $request->coordinador,
+                'correo_coordinador' => $request->correo_coordinador,
+                'asistente' => $request->asistente,
+                'correo_asistente' => $request->correo_asistente,
+                'representante' => $globalRepresentante,
+                'correo_representante' => $globalCorreoRepresentante,
+                'fecha_creacion' => now(),
+            ]);
 
-        // Filtro rango de importe
-        if (!empty($validated['importe_min'])) {
-            $query->where('importe_total', '>=', $validated['importe_min']);
-            $hasFilters = true;
+            return redirect()->route('coordinaciones')
+                ->with('success', 'Coordinación creada exitosamente.');
+        } catch (\Exception $e) {
+            return redirect()->route('coordinaciones')
+                ->with('error', 'Error al crear la coordinación: ' . $e->getMessage());
         }
-        if (!empty($validated['importe_max'])) {
-            $query->where('importe_total', '<=', $validated['importe_max']);
-            $hasFilters = true;
-        }
+    }
 
-        // Filtro de fechas de vigencia
-        if (!empty($validated['fecha_desde'])) {
-            $query->whereDate('fecha_vigencia', '>=', $validated['fecha_desde']);
-            $hasFilters = true;
-        }
-        if (!empty($validated['fecha_hasta'])) {
-            $query->whereDate('fecha_vigencia', '<=', $validated['fecha_hasta']);
-            $hasFilters = true;
-        }
+    public function coordinacionesUpdate(Request $request, $id)
+    {
+        $request->validate([
+            'nombre' => 'required|string|max:255',
+            'coordinador' => 'nullable|string|max:255',
+            'correo_coordinador' => 'nullable|email|max:255',
+            'asistente' => 'nullable|string|max:255',
+            'correo_asistente' => 'nullable|email|max:255',
+            'representante' => 'nullable|string|max:255',
+            'correo_representante' => 'nullable|email|max:255',
+        ]);
 
-        // Filtro de búsqueda
-        if (!empty($validated['search'])) {
-            $search = $validated['search'];
-            $query->where(function($q) use ($search) {
-                $q->where('solicitud', 'like', "%{$search}%")
-                  ->orWhere('rfc', 'like', "%{$search}%")
-                  ->orWhere('curp', 'like', "%{$search}%")
-                  ->orWhere('nombres', 'like', "%{$search}%")
-                  ->orWhere('apellido_paterno', 'like', "%{$search}%")
-                  ->orWhere('apellido_materno', 'like', "%{$search}%")
-                  ->orWhere('razon_social', 'like', "%{$search}%");
-            });
-            $hasFilters = true;
+        try {
+            $coordinacion = Coordinaciones::findOrFail($id);
+
+            // Actualización global del representante si viene en la solicitud
+            $updateAll = [];
+            if ($request->filled('representante')) {
+                $updateAll['representante'] = $request->representante;
+            }
+            if ($request->filled('correo_representante')) {
+                $updateAll['correo_representante'] = $request->correo_representante;
+            }
+            if (!empty($updateAll)) {
+                Coordinaciones::query()->update($updateAll);
+            }
+
+            // Actualizar campos del registro actual (individuales + reflejar global si vino)
+            $coordinacion->update([
+                'nombre' => $request->nombre,
+                'coordinador' => $request->coordinador,
+                'correo_coordinador' => $request->correo_coordinador,
+                'asistente' => $request->asistente,
+                'correo_asistente' => $request->correo_asistente,
+            ] + $updateAll);
+
+            return redirect()->route('coordinaciones')
+                ->with('success', 'Coordinación actualizada exitosamente.');
+        } catch (\Exception $e) {
+            return redirect()->route('coordinaciones')
+                ->with('error', 'Error al actualizar la coordinación: ' . $e->getMessage());
         }
+    }
 
-        // Solo eliminar si hay filtros activos
-        if ($hasFilters) {
-            $count = $query->count();
-            $query->delete();
+    public function coordinacionesDestroy($id)
+    {
+        try {
+            $coordinacion = Coordinaciones::findOrFail($id);
+            $coordinacion->delete();
 
-            return redirect()->route('lineas-captura')->with('success', "Se eliminaron {$count} líneas de captura filtradas correctamente.");
+            return redirect()->route('coordinaciones')
+                ->with('success', 'Coordinación eliminada exitosamente.');
+        } catch (\Exception $e) {
+            return redirect()->route('coordinaciones')
+                ->with('error', 'Error al eliminar la coordinación: ' . $e->getMessage());
         }
+    }
 
-        return redirect()->route('lineas-captura')->with('error', 'Debe aplicar al menos un filtro para eliminar registros filtrados.');
+    // ========== MÉTODOS PARA ENTIDADES DE PROCEDENCIA ==========
+    public function entidadesProcedenciaIndex()
+    {
+        $entidades = EntidadesProcedencia::orderBy('id', 'desc')->get();
+        return view('entidadprocedencia', compact('entidades'));
+    }
+
+    public function entidadesProcedenciaStore(Request $request)
+    {
+        $request->validate([
+            'nombre' => 'required|string|max:255',
+        ]);
+
+        try {
+            EntidadesProcedencia::create([
+                'nombre' => $request->nombre,
+                'fecha_creacion' => now(),
+            ]);
+
+            return redirect()->route('entidades-procedencia')
+                ->with('success', 'Entidad de procedencia creada exitosamente.');
+        } catch (\Exception $e) {
+            return redirect()->route('entidades-procedencia')
+                ->with('error', 'Error al crear la entidad: ' . $e->getMessage());
+        }
+    }
+
+    public function entidadesProcedenciaUpdate(Request $request, $id)
+    {
+        $request->validate([
+            'nombre' => 'required|string|max:255',
+        ]);
+
+        try {
+            $entidad = EntidadesProcedencia::findOrFail($id);
+            $entidad->update([
+                'nombre' => $request->nombre,
+            ]);
+
+            return redirect()->route('entidades-procedencia')
+                ->with('success', 'Entidad de procedencia actualizada exitosamente.');
+        } catch (\Exception $e) {
+            return redirect()->route('entidades-procedencia')
+                ->with('error', 'Error al actualizar la entidad: ' . $e->getMessage());
+        }
+    }
+
+    public function entidadesProcedenciaDestroy($id)
+    {
+        try {
+            $entidad = EntidadesProcedencia::findOrFail($id);
+            $entidad->delete();
+
+            return redirect()->route('entidades-procedencia')
+                ->with('success', 'Entidad de procedencia eliminada exitosamente.');
+        } catch (\Exception $e) {
+            return redirect()->route('entidades-procedencia')
+                ->with('error', 'Error al eliminar la entidad: ' . $e->getMessage());
+        }
+    }
+
+    // ========== MÉTODOS PARA SERVICIOS ==========
+    public function serviciosIndex()
+    {
+        $servicios = Servicios::with('coordinacionPredeterminada')->orderBy('id', 'desc')->get();
+        $coordinaciones = Coordinaciones::orderBy('nombre')->get();
+        return view('servicios', compact('servicios', 'coordinaciones'));
+    }
+
+    public function serviciosStore(Request $request)
+    {
+        $request->validate([
+            'nombre' => 'required|string|max:255',
+            'coordinacion_predeterminada_id' => 'nullable|exists:coordinaciones,id',
+        ]);
+
+        try {
+            Servicios::create([
+                'nombre' => $request->nombre,
+                'coordinacion_predeterminada_id' => $request->coordinacion_predeterminada_id,
+                'fecha_creacion' => now(),
+            ]);
+
+            return redirect()->route('servicios')
+                ->with('success', 'Servicio creado exitosamente.');
+        } catch (\Exception $e) {
+            return redirect()->route('servicios')
+                ->with('error', 'Error al crear el servicio: ' . $e->getMessage());
+        }
+    }
+
+    public function serviciosUpdate(Request $request, $id)
+    {
+        $request->validate([
+            'nombre' => 'required|string|max:255',
+            'coordinacion_predeterminada_id' => 'nullable|exists:coordinaciones,id',
+        ]);
+
+        try {
+            $servicio = Servicios::findOrFail($id);
+            $servicio->update([
+                'nombre' => $request->nombre,
+                'coordinacion_predeterminada_id' => $request->coordinacion_predeterminada_id,
+            ]);
+
+            return redirect()->route('servicios')
+                ->with('success', 'Servicio actualizado exitosamente.');
+        } catch (\Exception $e) {
+            return redirect()->route('servicios')
+                ->with('error', 'Error al actualizar el servicio: ' . $e->getMessage());
+        }
+    }
+
+    public function serviciosDestroy($id)
+    {
+        try {
+            $servicio = Servicios::findOrFail($id);
+            $servicio->delete();
+
+            return redirect()->route('servicios')
+                ->with('success', 'Servicio eliminado exitosamente.');
+        } catch (\Exception $e) {
+            return redirect()->route('servicios')
+                ->with('error', 'Error al eliminar el servicio: ' . $e->getMessage());
+        }
+    }
+
+    // ========== MÉTODOS PARA SOLICITUDES DE SERVICIOS ==========
+    public function solicitudesServiciosIndex()
+    {
+        $solicitudes = SolicitudesServicio::with(['entidadProcedencia', 'servicio', 'coordinacion'])
+            ->orderBy('id', 'desc')
+            ->get();
+
+        // Listas dinámicas para filtros
+        $coordinaciones = Coordinaciones::orderBy('nombre')->get(['id', 'nombre']);
+        $servicios = Servicios::orderBy('nombre')->get(['id', 'nombre']);
+
+        return view('solicitudes_servicios', compact('solicitudes', 'coordinaciones', 'servicios'));
     }
 }

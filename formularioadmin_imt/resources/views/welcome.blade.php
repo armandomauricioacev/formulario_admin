@@ -51,7 +51,7 @@
             <main class="flex max-w-[335px] w-full flex-col-reverse lg:max-w-4xl lg:flex-row">
                 <div class="text-[13px] leading-[20px] flex-1 p-6 pb-12 lg:p-20 bg-white dark:bg-[#161615] dark:text-[#EDEDEC] shadow-[inset_0px_0px_0px_1px_rgba(26,26,0,0.16)] dark:shadow-[inset_0px_0px_0px_1px_#fffaed2d] rounded-bl-lg rounded-br-lg lg:rounded-tl-lg lg:rounded-br-none flex flex-col items-center justify-center text-center gap-2 min-h-[300px] lg:min-h-[376px]">
                     <h1 class="mb-1 font-medium text-2xl lg:text-3xl">Panel de administración</h1>
-                    <p class="mb-2 text-[#706f6c] dark:text-[#A1A09A] text-base lg:text-lg">Instituto Mexicano del transporte. <br>Línea de captura.</p>
+                    <p class="mb-2 text-[#706f6c] dark:text-[#A1A09A] text-base lg:text-lg">Instituto Mexicano del transporte. <br>Solicitud de servicios.</p>
 
 
                 </div>
