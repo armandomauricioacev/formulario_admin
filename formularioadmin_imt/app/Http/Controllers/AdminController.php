@@ -351,7 +351,11 @@ class AdminController extends Controller
         $solicitudes = SolicitudesServicio::with(['entidadProcedencia', 'servicio', 'coordinacion'])
             ->orderBy('fecha_solicitud', 'desc')
             ->get();
-        return view('solicitudes_servicios', compact('solicitudes'));
+
+        // Lista de coordinaciones para el filtro del select en la vista
+        $coordinaciones = Coordinaciones::orderBy('nombre')->get();
+
+        return view('solicitudes_servicios', compact('solicitudes', 'coordinaciones'));
     }
 
     public function solicitudesServiciosDestroy($id)

@@ -10,6 +10,7 @@
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 text-gray-900">
                     <style>
+                        [x-cloak] { display: none !important; }
                         .table-wrapper {
                             width: 100%;
                             overflow-x: auto;
@@ -368,13 +369,10 @@
                         availableStatuses: [],
                         solicitudes: {{ json_encode($solicitudes ?? []) }},
                         coordinaciones: {{ json_encode($coordinaciones ?? []) }},
-                        serverError: {{ json_encode(session('error') ?? '') }},
                         totalRows: {{ isset($solicitudes) ? $solicitudes->count() : 0 }},
                         visibleRows: {{ isset($solicitudes) ? $solicitudes->count() : 0 }},
                         showDeleteModal: false,
                         deleteData: {},
-                        showErrorModal: false,
-                        errorData: { title: '', message: '', coordinacionId: null, associatedCount: 0 },
                         openDeleteModal(solicitud) {
                             const nombre = `${solicitud.nombres} ${solicitud.apellido_paterno} ${solicitud.apellido_materno || ''}`.trim();
                             this.deleteData = { id: solicitud.id, nombreCompleto: nombre };
@@ -447,25 +445,6 @@
                             // Lista de estatus permitidos
                             this.availableStatuses = ['en_revision', 'revisado'];
                         },
-                        initErrorModal() {
-                            const err = String(this.serverError || '');
-                            if (!err) return;
-                            const isFkErr = err.includes('FOREIGN KEY') || err.includes('1451') || err.includes('solicitudes_servicios_ibfk_3');
-                            if (!isFkErr) return;
-                            const match = err.match(/id\s*=\s*(\d+)/i);
-                            const coordId = match ? parseInt(match[1], 10) : null;
-                            let count = 0;
-                            if (coordId) {
-                                count = this.solicitudes.filter(s => Number(s.coordinacion_id) === coordId).length;
-                            }
-                            this.errorData = {
-                                title: 'La coordinación está referenciada por solicitudes.',
-                                message: 'No se puede eliminar porque existen solicitudes asociadas en la tabla Solicitudes de Servicios. Debe gestionar estas solicitudes antes de eliminar la coordinación.',
-                                coordinacionId: coordId,
-                                associatedCount: count
-                            };
-                            this.showErrorModal = true;
-                        },
                         initScrollSync() {
                             this.$nextTick(() => {
                                 const top = this.$refs.topScroll;
@@ -533,7 +512,7 @@
                             this.search = '';
                             this.showFilters = false;
                         }
-                    }" x-init="initStatuses(); initScrollSync(); initErrorModal()">
+                    }" x-init="initStatuses(); initScrollSync()">
 
                         <!-- Mensajes de sesión -->
                         @if(session('success'))
@@ -699,46 +678,7 @@
                             </div>
                         </div>
 
-                        <!-- Modal Error por Integridad Referencial (Coordinación) -->
-                        <div x-show="showErrorModal" x-cloak class="modal-overlay" @click.self="showErrorModal = false">
-                            <div class="modal-content">
-                                <div class="modal-header">
-                                    <h3 class="text-lg font-semibold">No se puede eliminar la coordinación</h3>
-                                    <button @click="showErrorModal = false" class="btn-close" aria-label="Cerrar">
-                                        <svg style="width: 24px; height: 24px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                                        </svg>
-                                    </button>
-                                </div>
-                                <div class="modal-body">
-                                    <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
-                                        <svg style="width: 24px; height: 24px; color: #dc2626;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M4.93 4.93a10 10 0 1114.14 14.14A10 10 0 014.93 4.93z" />
-                                        </svg>
-                                        <span class="text-red-700" x-text="errorData.title"></span>
-                                    </div>
-                                    <p class="text-gray-700 mb-4" x-text="errorData.message"></p>
-                                    <template x-if="errorData.coordinacionId">
-                                        <p class="text-gray-600 mb-4">
-                                            Coordinación afectada: #<span x-text="errorData.coordinacionId"></span>. Solicitudes asociadas: 
-                                            <span class="font-semibold" x-text="errorData.associatedCount"></span>.
-                                        </p>
-                                    </template>
-                                    <div class="text-sm text-gray-600 mb-6">
-                                        Alternativas:
-                                        <ul class="list-disc list-inside">
-                                            <li>Desvincular primero las solicitudes o reasignarlas a otra coordinación.</li>
-                                            <li>Eliminar las solicitudes asociadas antes de eliminar la coordinación.</li>
-                                            <li>Configurar eliminación en cascada (requiere cambio de esquema, p.ej. ON DELETE SET NULL/CASCADE).</li>
-                                        </ul>
-                                    </div>
-                                    <div style="display: flex; justify-content: flex-end; gap: 12px;">
-                                        <button type="button" class="btn-secondary" @click="if (errorData.coordinacionId) { coordinacionFilter = String(errorData.coordinacionId); showErrorModal = false; } else { showErrorModal = false; }">Ver solicitudes asociadas</button>
-                                        <button type="button" class="btn-primary" @click="showErrorModal = false">Entendido</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                        
 
                         <!-- (Modal de limpiar filtros removido por requerimiento) -->
 
