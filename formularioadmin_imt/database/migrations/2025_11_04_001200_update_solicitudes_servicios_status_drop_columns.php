@@ -8,8 +8,10 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration {
     public function up(): void
     {
-        // 1) Actualizar 'pendiente' a 'en_revision'
-        DB::statement("UPDATE solicitudes_servicios SET estatus = 'en_revision', fecha_actualizacion = CURRENT_TIMESTAMP WHERE estatus = 'pendiente'");
+        // 1) Actualizar 'pendiente' a 'en_revision' si existe la tabla
+        if (Schema::hasTable('solicitudes_servicios')) {
+            DB::statement("UPDATE solicitudes_servicios SET estatus = 'en_revision', fecha_actualizacion = CURRENT_TIMESTAMP WHERE estatus = 'pendiente'");
+        }
 
         // 2) Eliminar columnas usuario_actualizacion y notas_internas si existen
         if (Schema::hasTable('solicitudes_servicios')) {
@@ -23,8 +25,10 @@ return new class extends Migration {
             });
         }
 
-        // 3) Modificar ENUM para permitir solo 'en_revision' y 'revisado'
-        DB::statement("ALTER TABLE solicitudes_servicios MODIFY COLUMN estatus ENUM('en_revision','revisado') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'en_revision'");
+        // 3) Modificar ENUM para permitir solo 'en_revision' y 'revisado' si existe la tabla
+        if (Schema::hasTable('solicitudes_servicios')) {
+            DB::statement("ALTER TABLE solicitudes_servicios MODIFY COLUMN estatus ENUM('en_revision','revisado') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'en_revision'");
+        }
     }
 
     public function down(): void

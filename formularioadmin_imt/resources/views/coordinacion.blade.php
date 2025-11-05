@@ -223,6 +223,14 @@
             max-height: 90vh;
             overflow-y: auto;
         }
+        /* Igualar tamaño de botones en modales de eliminación */
+        .modal-body .btn-secondary,
+        .modal-body .btn-delete {
+            padding: 8px 12px;
+            font-size: 14px;
+            border-radius: 6px;
+            min-width: 120px;
+        }
         
         .modal-header {
             padding: 20px 24px;
@@ -375,8 +383,14 @@
                             showCreateModal: false,
                             showEditModal: false,
                             showDeleteModal: false,
+                            showRepresentanteModal: false,
                             editData: {},
                             deleteData: {},
+                            createData: { nombre: '', coordinador: '', correo_coordinador: '', asistente: '', correo_asistente: '' },
+                            createErrors: {},
+                            repData: { representante: '', correo_representante: '' },
+                            globalRepresentante: {{ json_encode($globalRepresentante ?? '') }},
+                            globalCorreoRepresentante: {{ json_encode($globalCorreoRepresentante ?? '') }},
                             
                             normalize(text) {
                                 return String(text || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -389,16 +403,14 @@
                                 }
                                 
                                 const query = this.normalize(this.searchQuery);
-                                const filtered = this.coordinaciones.filter(coordinacion => {
-                                    return this.normalize(coordinacion.nombre).includes(query) ||
-                                           this.normalize(coordinacion.id.toString()).includes(query) ||
-                                           this.normalize(coordinacion.coordinador).includes(query) ||
-                                           this.normalize(coordinacion.asistente).includes(query) ||
-                                           this.normalize(coordinacion.representante).includes(query) ||
-                                           this.normalize(coordinacion.correo_coordinador).includes(query) ||
-                                           this.normalize(coordinacion.correo_asistente).includes(query) ||
-                                           this.normalize(coordinacion.correo_representante).includes(query);
-                                });
+                            const filtered = this.coordinaciones.filter(coordinacion => {
+                                return this.normalize(coordinacion.nombre).includes(query) ||
+                                       this.normalize(coordinacion.id.toString()).includes(query) ||
+                                       this.normalize(coordinacion.coordinador).includes(query) ||
+                                       this.normalize(coordinacion.asistente).includes(query) ||
+                                       this.normalize(coordinacion.correo_coordinador).includes(query) ||
+                                       this.normalize(coordinacion.correo_asistente).includes(query);
+                            });
                                 
                                 this.visibleRows = filtered.length;
                                 return filtered.sort((a, b) => b.id - a.id);
@@ -411,9 +423,7 @@
                                     coordinador: coordinacion.coordinador || '',
                                     correo_coordinador: coordinacion.correo_coordinador || '',
                                     asistente: coordinacion.asistente || '',
-                                    correo_asistente: coordinacion.correo_asistente || '',
-                                    representante: coordinacion.representante || '',
-                                    correo_representante: coordinacion.correo_representante || ''
+                                    correo_asistente: coordinacion.correo_asistente || ''
                                 };
                                 this.showEditModal = true;
                             },
@@ -424,6 +434,38 @@
                                     nombre: coordinacion.nombre
                                 };
                                 this.showDeleteModal = true;
+                            },
+                            openRepresentanteModal() {
+                                this.repData = {
+                                    representante: this.globalRepresentante || '',
+                                    correo_representante: this.globalCorreoRepresentante || ''
+                                };
+                                this.showRepresentanteModal = true;
+                            },
+
+                            validateEmail(email) {
+                                if (!email) return true;
+                                const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                                return re.test(String(email).toLowerCase());
+                            },
+
+                            validateAndSubmitCreate() {
+                                this.createErrors = {};
+                                if (!this.createData.nombre || !this.createData.nombre.trim()) {
+                                    this.createErrors.nombre = 'El nombre es obligatorio.';
+                                }
+                                if (this.createData.correo_coordinador && !this.validateEmail(this.createData.correo_coordinador)) {
+                                    this.createErrors.correo_coordinador = 'Correo de coordinador inválido.';
+                                }
+                                if (this.createData.correo_asistente && !this.validateEmail(this.createData.correo_asistente)) {
+                                    this.createErrors.correo_asistente = 'Correo de asistente inválido.';
+                                }
+                                if (this.createData.correo_representante && !this.validateEmail(this.createData.correo_representante)) {
+                                    this.createErrors.correo_representante = 'Correo de representante inválido.';
+                                }
+                                if (Object.keys(this.createErrors).length === 0) {
+                                    this.$refs.createForm.submit();
+                                }
                             },
                             
                             formatDate(dateString) {
@@ -489,6 +531,10 @@
                             <button @click="showCreateModal = true" class="btn-primary">
                                 + Agregar Coordinación
                             </button>
+                            <button @click="openRepresentanteModal()" class="btn-secondary" style="margin-left: 8px;">
+                                Representante
+                            </button>
+                            
                             
                             <div class="search-container">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="search-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -521,8 +567,6 @@
                                             <th>Correo Coordinador</th>
                                             <th>Asistente</th>
                                             <th>Correo Asistente</th>
-                                            <th>Representante (Global)</th>
-                                            <th>Correo Representante (Global)</th>
                                             <th>Fecha de Creación</th>
                                             <th style="text-align: center;">Acciones</th>
                                         </tr>
@@ -536,8 +580,6 @@
                                                 <td x-text="coordinacion.correo_coordinador || '—'"></td>
                                                 <td x-text="coordinacion.asistente || '—'"></td>
                                                 <td x-text="coordinacion.correo_asistente || '—'"></td>
-                                                <td x-text="coordinacion.representante || '—'"></td>
-                                                <td x-text="coordinacion.correo_representante || '—'"></td>
                                                 <td x-text="formatDate(coordinacion.fecha_creacion)"></td>
                                                 <td style="text-align: center;">
                                                     <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
@@ -580,38 +622,33 @@
                                         </svg>
                                     </button>
                                 </div>
-                                <form method="POST" action="{{ route('coordinaciones.store') }}" class="modal-body">
+                                <form x-ref="createForm" method="POST" action="{{ route('coordinaciones.store') }}" class="modal-body" @submit.prevent="validateAndSubmitCreate()">
                                     @csrf
                                     <div class="form-group">
                                         <label class="form-label">Nombre *</label>
-                                        <input type="text" name="nombre" class="form-input" required />
+                                        <input type="text" name="nombre" class="form-input" x-model="createData.nombre" required />
+                                        <p class="text-red-600 text-sm" x-show="createErrors.nombre" x-text="createErrors.nombre"></p>
                                     </div>
                                     <div class="form-group">
                                         <label class="form-label">Coordinador</label>
-                                        <input type="text" name="coordinador" class="form-input" />
+                                        <input type="text" name="coordinador" class="form-input" x-model="createData.coordinador" />
                                     </div>
                                     <div class="form-group">
                                         <label class="form-label">Correo Coordinador</label>
-                                        <input type="email" name="correo_coordinador" class="form-input" />
+                                        <input type="email" name="correo_coordinador" class="form-input" x-model="createData.correo_coordinador" />
+                                        <p class="text-red-600 text-sm" x-show="createErrors.correo_coordinador" x-text="createErrors.correo_coordinador"></p>
                                     </div>
                                     <div class="form-group">
                                         <label class="form-label">Asistente</label>
-                                        <input type="text" name="asistente" class="form-input" />
+                                        <input type="text" name="asistente" class="form-input" x-model="createData.asistente" />
                                     </div>
                                     <div class="form-group">
                                         <label class="form-label">Correo Asistente</label>
-                                        <input type="email" name="correo_asistente" class="form-input" />
+                                        <input type="email" name="correo_asistente" class="form-input" x-model="createData.correo_asistente" />
+                                        <p class="text-red-600 text-sm" x-show="createErrors.correo_asistente" x-text="createErrors.correo_asistente"></p>
                                     </div>
-                                    <div class="form-group">
-                                        <label class="form-label">Representante (Global)</label>
-                                        <input type="text" name="representante" class="form-input" />
-                                        <p class="text-xs text-gray-500 mt-1">Este campo es compartido por todas las coordinaciones.</p>
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="form-label">Correo Representante (Global)</label>
-                                        <input type="email" name="correo_representante" class="form-input" />
-                                        <p class="text-xs text-gray-500 mt-1">Este correo se aplicará a todas las coordinaciones.</p>
-                                    </div>
+                                    <!-- Los nuevos registros heredan el representante global automáticamente -->
+                                    
                                     
                                     <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;">
                                         <button type="button" @click="showCreateModal = false" class="btn-secondary">Cancelar</button>
@@ -655,15 +692,7 @@
                                         <label class="form-label">Correo Asistente</label>
                                         <input type="email" name="correo_asistente" x-model="editData.correo_asistente" class="form-input" />
                                     </div>
-                                    <div class="form-group">
-                                        <label class="form-label">Representante (Global)</label>
-                                        <input type="text" name="representante" x-model="editData.representante" class="form-input" />
-                                        <p class="text-xs text-gray-500 mt-1">Al actualizar aquí, se aplicará a todas las coordinaciones.</p>
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="form-label">Correo Representante (Global)</label>
-                                        <input type="email" name="correo_representante" x-model="editData.correo_representante" class="form-input" />
-                                    </div>
+                                    
                                     
                                     <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;">
                                         <button type="button" @click="showEditModal = false" class="btn-secondary">Cancelar</button>
@@ -700,6 +729,35 @@
                                         </form>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+
+                        <!-- Modal Representante Global -->
+                        <div x-show="showRepresentanteModal" x-cloak class="modal-overlay" @click.self="showRepresentanteModal = false">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h3 class="text-lg font-semibold">Actualizar Representante Global</h3>
+                                    <button @click="showRepresentanteModal = false" class="btn-close" aria-label="Cerrar">
+                                        <svg style="width: 24px; height: 24px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                </div>
+                                <form method="POST" action="{{ route('coordinaciones.representante.update') }}" class="modal-body">
+                                    @csrf
+                                    <div class="form-group">
+                                        <label class="form-label">Nombre del Representante</label>
+                                        <input type="text" name="representante" class="form-input" x-model="repData.representante" />
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Correo del Representante</label>
+                                        <input type="email" name="correo_representante" class="form-input" x-model="repData.correo_representante" />
+                                    </div>
+                                    <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;">
+                                        <button type="button" @click="showRepresentanteModal = false" class="btn-secondary">Cancelar</button>
+                                        <button type="submit" class="btn-primary">Confirmar</button>
+                                    </div>
+                                </form>
                             </div>
                         </div>
                     </div>

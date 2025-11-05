@@ -235,6 +235,14 @@
         .modal-body {
             padding: 24px;
         }
+        /* Igualar tamaño de botones en modales de eliminación */
+        .modal-body .btn-secondary,
+        .modal-body .btn-delete {
+            padding: 8px 12px;
+            font-size: 14px;
+            border-radius: 6px;
+            min-width: 120px;
+        }
         
         .form-group {
             margin-bottom: 16px;
@@ -377,6 +385,8 @@
                             showDeleteModal: false,
                             editData: {},
                             deleteData: {},
+                            createEntidadData: { nombre: '' },
+                            createEntidadErrors: {},
                             
                             normalize(text) {
                                 return String(text || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -414,6 +424,15 @@
                                     nombre: entidad.nombre
                                 };
                                 this.showDeleteModal = true;
+                            },
+                            validateAndSubmitCreateEntidad() {
+                                this.createEntidadErrors = {};
+                                if (!this.createEntidadData.nombre || !this.createEntidadData.nombre.trim()) {
+                                    this.createEntidadErrors.nombre = 'El nombre es obligatorio.';
+                                }
+                                if (Object.keys(this.createEntidadErrors).length === 0) {
+                                    this.$refs.createEntidadForm.submit();
+                                }
                             },
                             
                             formatDate(dateString) {
@@ -558,11 +577,12 @@
                                         </svg>
                                     </button>
                                 </div>
-                                <form method="POST" action="{{ route('entidades-procedencia.store') }}" class="modal-body">
+                                <form x-ref="createEntidadForm" method="POST" action="{{ route('entidades-procedencia.store') }}" class="modal-body" @submit.prevent="validateAndSubmitCreateEntidad()">
                                     @csrf
                                     <div class="form-group">
                                         <label class="form-label">Nombre *</label>
-                                        <input type="text" name="nombre" class="form-input" required />
+                                        <input type="text" name="nombre" class="form-input" x-model="createEntidadData.nombre" required />
+                                        <p class="text-red-600 text-sm" x-show="createEntidadErrors.nombre" x-text="createEntidadErrors.nombre"></p>
                                     </div>
                                     
                                     <!-- Sección de descripción eliminada -->

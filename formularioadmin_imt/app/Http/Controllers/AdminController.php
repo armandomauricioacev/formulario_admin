@@ -86,14 +86,27 @@ class AdminController extends Controller
     // ========== MÉTODOS PARA COORDINACIONES ==========
     public function coordinacionesIndex()
     {
-        $coordinaciones = Coordinaciones::orderBy('id', 'desc')->get();
-        return view('coordinacion', compact('coordinaciones'));
+        $coordinaciones = Coordinaciones::orderBy('nombre')->get();
+
+        // Obtener valores globales de representante (si existen en alguna coordinación)
+        $global = Coordinaciones::select('representante', 'correo_representante')
+            ->where(function ($q) {
+                $q->whereNotNull('representante')
+                  ->orWhereNotNull('correo_representante');
+            })
+            ->orderByDesc('id')
+            ->first();
+
+        $globalRepresentante = $global->representante ?? '';
+        $globalCorreoRepresentante = $global->correo_representante ?? '';
+
+        return view('coordinacion', compact('coordinaciones', 'globalRepresentante', 'globalCorreoRepresentante'));
     }
 
     public function coordinacionesStore(Request $request)
     {
         $request->validate([
-            'nombre' => 'required|string|max:255',
+            'nombre' => 'required|string|max:255|unique:coordinaciones,nombre',
             'coordinador' => 'nullable|string|max:255',
             'correo_coordinador' => 'nullable|email|max:255',
             'asistente' => 'nullable|string|max:255',
@@ -103,29 +116,26 @@ class AdminController extends Controller
         ]);
 
         try {
-            // Obtener valores globales actuales (si existen)
-            $globalRepresentante = Coordinaciones::whereNotNull('representante')->value('representante');
-            $globalCorreoRepresentante = Coordinaciones::whereNotNull('correo_representante')->value('correo_representante');
+            // Tomar valores globales de representante si no vienen en la petición
+            $global = Coordinaciones::select('representante', 'correo_representante')
+                ->where(function ($q) {
+                    $q->whereNotNull('representante')
+                      ->orWhereNotNull('correo_representante');
+                })
+                ->orderByDesc('id')
+                ->first();
 
-            // Si se envía representante/correo, se actualiza de forma global
-            if ($request->filled('representante')) {
-                $globalRepresentante = $request->representante;
-                Coordinaciones::query()->update(['representante' => $globalRepresentante]);
-            }
-            if ($request->filled('correo_representante')) {
-                $globalCorreoRepresentante = $request->correo_representante;
-                Coordinaciones::query()->update(['correo_representante' => $globalCorreoRepresentante]);
-            }
+            $rep = $request->input('representante', $global->representante ?? null);
+            $repCorreo = $request->input('correo_representante', $global->correo_representante ?? null);
 
-            // Crear registro con campos individuales + globales (si existen)
             Coordinaciones::create([
                 'nombre' => $request->nombre,
                 'coordinador' => $request->coordinador,
                 'correo_coordinador' => $request->correo_coordinador,
                 'asistente' => $request->asistente,
                 'correo_asistente' => $request->correo_asistente,
-                'representante' => $globalRepresentante,
-                'correo_representante' => $globalCorreoRepresentante,
+                'representante' => $rep,
+                'correo_representante' => $repCorreo,
                 'fecha_creacion' => now(),
             ]);
 
@@ -140,38 +150,22 @@ class AdminController extends Controller
     public function coordinacionesUpdate(Request $request, $id)
     {
         $request->validate([
-            'nombre' => 'required|string|max:255',
+            'nombre' => 'required|string|max:255|unique:coordinaciones,nombre,' . $id,
             'coordinador' => 'nullable|string|max:255',
             'correo_coordinador' => 'nullable|email|max:255',
             'asistente' => 'nullable|string|max:255',
             'correo_asistente' => 'nullable|email|max:255',
-            'representante' => 'nullable|string|max:255',
-            'correo_representante' => 'nullable|email|max:255',
         ]);
 
         try {
             $coordinacion = Coordinaciones::findOrFail($id);
-
-            // Actualización global del representante si viene en la solicitud
-            $updateAll = [];
-            if ($request->filled('representante')) {
-                $updateAll['representante'] = $request->representante;
-            }
-            if ($request->filled('correo_representante')) {
-                $updateAll['correo_representante'] = $request->correo_representante;
-            }
-            if (!empty($updateAll)) {
-                Coordinaciones::query()->update($updateAll);
-            }
-
-            // Actualizar campos del registro actual (individuales + reflejar global si vino)
             $coordinacion->update([
                 'nombre' => $request->nombre,
                 'coordinador' => $request->coordinador,
                 'correo_coordinador' => $request->correo_coordinador,
                 'asistente' => $request->asistente,
                 'correo_asistente' => $request->correo_asistente,
-            ] + $updateAll);
+            ]);
 
             return redirect()->route('coordinaciones')
                 ->with('success', 'Coordinación actualizada exitosamente.');
@@ -195,10 +189,35 @@ class AdminController extends Controller
         }
     }
 
+    /**
+     * Actualiza el representante y correo representante de forma global
+     * aplicándolo a todas las coordinaciones.
+     */
+    public function coordinacionesRepresentativeUpdate(Request $request)
+    {
+        $request->validate([
+            'representante' => 'nullable|string|max:255',
+            'correo_representante' => 'nullable|email|max:255',
+        ]);
+
+        try {
+            Coordinaciones::query()->update([
+                'representante' => $request->representante,
+                'correo_representante' => $request->correo_representante,
+            ]);
+
+            return redirect()->route('coordinaciones')
+                ->with('success', 'Representante actualizado exitosamente.');
+        } catch (\Exception $e) {
+            return redirect()->route('coordinaciones')
+                ->with('error', 'Error al actualizar el representante: ' . $e->getMessage());
+        }
+    }
+
     // ========== MÉTODOS PARA ENTIDADES DE PROCEDENCIA ==========
     public function entidadesProcedenciaIndex()
     {
-        $entidades = EntidadesProcedencia::orderBy('id', 'desc')->get();
+        $entidades = EntidadesProcedencia::orderBy('nombre')->get();
         return view('entidadprocedencia', compact('entidades'));
     }
 
@@ -259,7 +278,7 @@ class AdminController extends Controller
     // ========== MÉTODOS PARA SERVICIOS ==========
     public function serviciosIndex()
     {
-        $servicios = Servicios::with('coordinacionPredeterminada')->orderBy('id', 'desc')->get();
+        $servicios = Servicios::with('coordinacionPredeterminada')->orderBy('nombre')->get();
         $coordinaciones = Coordinaciones::orderBy('nombre')->get();
         return view('servicios', compact('servicios', 'coordinaciones'));
     }
@@ -269,12 +288,14 @@ class AdminController extends Controller
         $request->validate([
             'nombre' => 'required|string|max:255',
             'coordinacion_predeterminada_id' => 'nullable|exists:coordinaciones,id',
+            'descripcion' => 'nullable|string',
         ]);
 
         try {
             Servicios::create([
                 'nombre' => $request->nombre,
                 'coordinacion_predeterminada_id' => $request->coordinacion_predeterminada_id,
+                'descripcion' => $request->descripcion,
                 'fecha_creacion' => now(),
             ]);
 
@@ -291,6 +312,7 @@ class AdminController extends Controller
         $request->validate([
             'nombre' => 'required|string|max:255',
             'coordinacion_predeterminada_id' => 'nullable|exists:coordinaciones,id',
+            'descripcion' => 'nullable|string',
         ]);
 
         try {
@@ -298,6 +320,7 @@ class AdminController extends Controller
             $servicio->update([
                 'nombre' => $request->nombre,
                 'coordinacion_predeterminada_id' => $request->coordinacion_predeterminada_id,
+                'descripcion' => $request->descripcion,
             ]);
 
             return redirect()->route('servicios')
@@ -326,13 +349,22 @@ class AdminController extends Controller
     public function solicitudesServiciosIndex()
     {
         $solicitudes = SolicitudesServicio::with(['entidadProcedencia', 'servicio', 'coordinacion'])
-            ->orderBy('id', 'desc')
+            ->orderBy('fecha_solicitud', 'desc')
             ->get();
+        return view('solicitudes_servicios', compact('solicitudes'));
+    }
 
-        // Listas dinámicas para filtros
-        $coordinaciones = Coordinaciones::orderBy('nombre')->get(['id', 'nombre']);
-        $servicios = Servicios::orderBy('nombre')->get(['id', 'nombre']);
+    public function solicitudesServiciosDestroy($id)
+    {
+        try {
+            $solicitud = SolicitudesServicio::findOrFail($id);
+            $solicitud->delete();
 
-        return view('solicitudes_servicios', compact('solicitudes', 'coordinaciones', 'servicios'));
+            return redirect()->route('solicitudes')
+                ->with('success', 'Solicitud eliminada exitosamente.');
+        } catch (\Exception $e) {
+            return redirect()->route('solicitudes')
+                ->with('error', 'Error al eliminar la solicitud: ' . $e->getMessage());
+        }
     }
 }

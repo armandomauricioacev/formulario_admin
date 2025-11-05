@@ -11,14 +11,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('lineas_capturadas', function (Blueprint $table) {
-            // Verificar si la columna ya existe antes de agregarla
-            if (!Schema::hasColumn('lineas_capturadas', 'detalle_tramites_snapshot')) {
-                // Agregar columna JSON para el snapshot de trámites
-                // Permite valores NULL en caso de registros antiguos
-                $table->json('detalle_tramites_snapshot')->nullable()->after('tramite_id');
-            }
-        });
+        if (Schema::hasTable('lineas_capturadas')) {
+            Schema::table('lineas_capturadas', function (Blueprint $table) {
+                // Verificar si la columna ya existe antes de agregarla
+                if (!Schema::hasColumn('lineas_capturadas', 'detalle_tramites_snapshot')) {
+                    // Agregar columna JSON para el snapshot de trámites
+                    // Permite valores NULL en caso de registros antiguos
+                    $table->json('detalle_tramites_snapshot')->nullable()->after('tramite_id');
+                }
+            });
+        }
     }
 
     /**
@@ -26,11 +28,13 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('lineas_capturadas', function (Blueprint $table) {
-            // Solo eliminar si existe
-            if (Schema::hasColumn('lineas_capturadas', 'detalle_tramites_snapshot')) {
-                $table->dropColumn('detalle_tramites_snapshot');
-            }
-        });
+        if (Schema::hasTable('lineas_capturadas')) {
+            Schema::table('lineas_capturadas', function (Blueprint $table) {
+                // Solo eliminar si existe
+                if (Schema::hasColumn('lineas_capturadas', 'detalle_tramites_snapshot')) {
+                    $table->dropColumn('detalle_tramites_snapshot');
+                }
+            });
+        }
     }
 };

@@ -250,6 +250,14 @@
         .modal-body {
             padding: 24px;
         }
+        /* Igualar tamaño de botones en modales de eliminación */
+        .modal-body .btn-secondary,
+        .modal-body .btn-delete {
+            padding: 8px 12px;
+            font-size: 14px;
+            border-radius: 6px;
+            min-width: 120px;
+        }
         
         .form-group {
             margin-bottom: 16px;
@@ -358,6 +366,8 @@
                             showDeleteModal: false,
                             editData: {},
                             deleteData: {},
+                            createServicioData: { nombre: '', coordinacion_predeterminada_id: '' },
+                            createServicioErrors: {},
                             
                             normalize(text) {
                                 return String(text || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -400,6 +410,15 @@
                                 if (!coordinacionId) return 'Sin coordinación';
                                 const coordinacion = this.coordinaciones.find(c => c.id == coordinacionId);
                                 return coordinacion ? coordinacion.nombre : 'Coordinación no encontrada';
+                            },
+                            validateAndSubmitCreateServicio() {
+                                this.createServicioErrors = {};
+                                if (!this.createServicioData.nombre || !this.createServicioData.nombre.trim()) {
+                                    this.createServicioErrors.nombre = 'El nombre es obligatorio.';
+                                }
+                                if (Object.keys(this.createServicioErrors).length === 0) {
+                                    this.$refs.createServicioForm.submit();
+                                }
                             },
                             
                             formatDate(dateString) {
@@ -546,15 +565,16 @@
                                         </svg>
                                     </button>
                                 </div>
-                                <form method="POST" action="{{ route('servicios.store') }}" class="modal-body">
+                                <form x-ref="createServicioForm" method="POST" action="{{ route('servicios.store') }}" class="modal-body" @submit.prevent="validateAndSubmitCreateServicio()">
                                     @csrf
                                     <div class="form-group">
                                         <label class="form-label">Nombre *</label>
-                                        <input type="text" name="nombre" class="form-input" required />
+                                        <input type="text" name="nombre" class="form-input" x-model="createServicioData.nombre" required />
+                                        <p class="text-red-600 text-sm" x-show="createServicioErrors.nombre" x-text="createServicioErrors.nombre"></p>
                                     </div>
                                     <div class="form-group">
                                         <label class="form-label">Coordinación Predeterminada</label>
-                                        <select name="coordinacion_predeterminada_id" class="form-input">
+                                        <select name="coordinacion_predeterminada_id" class="form-input" x-model="createServicioData.coordinacion_predeterminada_id">
                                             <option value="">Seleccionar coordinación</option>
                                             @if(isset($coordinaciones))
                                                 @foreach($coordinaciones as $coordinacion)

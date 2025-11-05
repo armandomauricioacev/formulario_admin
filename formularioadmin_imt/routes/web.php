@@ -69,6 +69,10 @@ Route::put('/coordinaciones/{coordinacion}', [AdminController::class, 'coordinac
 Route::delete('/coordinaciones/{coordinacion}', [AdminController::class, 'coordinacionesDestroy'])
     ->middleware(['auth', 'verified'])->name('coordinaciones.destroy');
 
+// Representante global de Coordinaciones
+Route::post('/coordinaciones/representante', [AdminController::class, 'coordinacionesRepresentativeUpdate'])
+    ->middleware(['auth', 'verified'])->name('coordinaciones.representante.update');
+
 // ========== RUTAS DE ENTIDADES DE PROCEDENCIA ==========
 Route::get('/entidades-procedencia', [AdminController::class, 'entidadesProcedenciaIndex'])
     ->middleware(['auth', 'verified'])->name('entidades-procedencia');
@@ -96,6 +100,10 @@ Route::delete('/servicios/{servicio}', [AdminController::class, 'serviciosDestro
 
 Route::get('/solicitudes', [AdminController::class, 'solicitudesServiciosIndex'])
     ->middleware(['auth', 'verified'])->name('solicitudes');
+
+// Eliminar solicitud individual
+Route::delete('/solicitudes/{solicitud}', [AdminController::class, 'solicitudesServiciosDestroy'])
+    ->middleware(['auth', 'verified'])->name('solicitudes.destroy');
 
 // ========== RUTAS DE PERFIL ==========
 Route::middleware('auth')->group(function () {
