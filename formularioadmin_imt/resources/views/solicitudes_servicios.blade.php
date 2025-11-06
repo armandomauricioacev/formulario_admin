@@ -363,7 +363,7 @@
                     <div x-data="{
                         search: '',
                         showFilters: false,
-                        statusFilter: 'en_revision',
+                        statusFilter: '',
                         dateFilter: '',
                         coordinacionFilter: '',
                         availableStatuses: [],
@@ -373,6 +373,67 @@
                         visibleRows: {{ isset($solicitudes) ? $solicitudes->count() : 0 }},
                         showDeleteModal: false,
                         deleteData: {},
+                        showReviewedModal: false,
+                        reviewedData: {},
+                        showInReviewModal: false,
+                        inReviewData: {},
+                        
+                        openReviewedModal(solicitud) {
+                            const nombre = `${solicitud.nombres} ${solicitud.apellido_paterno} ${solicitud.apellido_materno || ''}`.trim();
+                            this.reviewedData = { id: solicitud.id, nombreCompleto: nombre, ref: solicitud };
+                            this.showReviewedModal = true;
+                        },
+                        openInReviewModal(solicitud) {
+                            const nombre = `${solicitud.nombres} ${solicitud.apellido_paterno} ${solicitud.apellido_materno || ''}`.trim();
+                            this.inReviewData = { id: solicitud.id, nombreCompleto: nombre, ref: solicitud };
+                            this.showInReviewModal = true;
+                        },
+                        async confirmReviewed() {
+                            try {
+                                const token = document.querySelector('meta[name=csrf-token]')?.getAttribute('content');
+                                const res = await fetch(`/solicitudes/${this.reviewedData.id}/revisado`, {
+                                    method: 'PATCH',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'X-CSRF-TOKEN': token,
+                                        'Accept': 'application/json',
+                                    },
+                                    body: JSON.stringify({})
+                                });
+                                if (!res.ok) throw new Error('Respuesta no válida');
+                                const data = await res.json();
+                                this.reviewedData.ref.estatus = 'revisado';
+                                this.reviewedData.ref.fecha_actualizacion = data.fecha_actualizacion || this.reviewedData.ref.fecha_actualizacion;
+                                
+                                this.showReviewedModal = false;
+                            } catch (e) {
+                                console.error(e);
+                                alert('Ocurrió un error al marcar como revisado.');
+                            }
+                        },
+                        async confirmInReview() {
+                            try {
+                                const token = document.querySelector('meta[name=csrf-token]')?.getAttribute('content');
+                                const res = await fetch(`/solicitudes/${this.inReviewData.id}/en_revision`, {
+                                    method: 'PATCH',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'X-CSRF-TOKEN': token,
+                                        'Accept': 'application/json',
+                                    },
+                                    body: JSON.stringify({})
+                                });
+                                if (!res.ok) throw new Error('Respuesta no válida');
+                                const data = await res.json();
+                                this.inReviewData.ref.estatus = 'en_revision';
+                                this.inReviewData.ref.fecha_actualizacion = data.fecha_actualizacion || this.inReviewData.ref.fecha_actualizacion;
+
+                                this.showInReviewModal = false;
+                            } catch (e) {
+                                console.error(e);
+                                alert('Ocurrió un error al revertir la solicitud a En Revisión.');
+                            }
+                        },
                         openDeleteModal(solicitud) {
                             const nombre = `${solicitud.nombres} ${solicitud.apellido_paterno} ${solicitud.apellido_materno || ''}`.trim();
                             this.deleteData = { id: solicitud.id, nombreCompleto: nombre };
@@ -381,13 +442,13 @@
                         get filteredSolicitudes() {
                             let items = [...this.solicitudes];
 
-                            // Filtro por estatus
+                            /* Filtro por estatus */
                             if (this.statusFilter) {
                                 const sf = this.statusFilter.toLowerCase();
                                 items = items.filter(s => (s.estatus || '').toLowerCase() === sf);
                             }
 
-                            // Filtro por fecha única de solicitud (día exacto)
+                            /* Filtro por fecha única de solicitud (día exacto) */
                             if (this.dateFilter) {
                                 const start = new Date(this.dateFilter + 'T00:00:00');
                                 const end = new Date(this.dateFilter + 'T23:59:59');
@@ -397,13 +458,13 @@
                                 });
                             }
 
-                            // Filtro por coordinación
+                            /* Filtro por coordinación */
                             if (this.coordinacionFilter) {
                                 const cf = parseInt(this.coordinacionFilter, 10);
                                 items = items.filter(s => Number(s.coordinacion_id) === cf);
                             }
 
-                            // (Filtro por servicio eliminado por requerimiento)
+                            /* (Filtro por servicio eliminado por requerimiento) */
 
                             if (!this.search) {
                                 this.visibleRows = items.length;
@@ -506,7 +567,7 @@
                         },
                         clearFilters() {
                             // Limpieza inmediata sin confirmación
-                            this.statusFilter = 'en_revision';
+                            this.statusFilter = '';
                             this.dateFilter = '';
                             this.coordinacionFilter = '';
                             this.search = '';
@@ -565,6 +626,7 @@
                             <div class="filter-group">
                                 <label class="filter-label">Estatus</label>
                                 <select class="filter-input" x-model="statusFilter">
+                                    <option value="">Todos</option>
                                     <template x-for="estatus in availableStatuses" :key="estatus">
                                         <option :value="estatus" x-text="formatStatus(estatus)"></option>
                                     </template>
@@ -629,6 +691,12 @@
                                                 </td>
                                                 <td x-text="formatDate(solicitud.fecha_solicitud)"></td>
                                                 <td style="text-align: center;">
+                                                    <button type="button" class="btn-primary" style="margin-right:8px"
+                                                        x-show="(solicitud.estatus || '').toLowerCase() !== 'revisado'"
+                                                        @click="openReviewedModal(solicitud)">Revisado</button>
+                                                    <button type="button" class="btn-primary" style="margin-right:8px"
+                                                        x-show="(solicitud.estatus || '').toLowerCase() === 'revisado'"
+                                                        @click="openInReviewModal(solicitud)">En Revisión</button>
                                                     <button type="button" class="btn-delete" @click="openDeleteModal(solicitud)">Eliminar</button>
                                                 </td>
                                             </tr>
@@ -673,6 +741,54 @@
                                             @method('DELETE')
                                             <button type="submit" class="btn-delete">Eliminar</button>
                                         </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Modal Confirmar Revisado -->
+                        <div x-show="showReviewedModal" x-cloak class="modal-overlay" @click.self="showReviewedModal = false">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h3 class="text-lg font-semibold">Confirmar Revisado</h3>
+                                    <button @click="showReviewedModal = false" class="btn-close" aria-label="Cerrar">
+                                        <svg style="width: 24px; height: 24px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                </div>
+                                <div class="modal-body">
+                                    <p class="text-gray-600 mb-6">
+                                        ¿Confirmas que la solicitud #<span x-text="reviewedData.id" class="font-semibold"></span> de
+                                        "<span x-text="reviewedData.nombreCompleto" class="font-semibold"></span>" ya fue revisada?
+                                    </p>
+                                    <div style="display: flex; justify-content: flex-end; gap: 12px;">
+                                        <button type="button" @click="showReviewedModal = false" class="btn-secondary">Cancelar</button>
+                                        <button type="button" class="btn-primary" @click="confirmReviewed()">Confirmar</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Modal Confirmar En Revisión -->
+                        <div x-show="showInReviewModal" x-cloak class="modal-overlay" @click.self="showInReviewModal = false">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h3 class="text-lg font-semibold">Confirmar En Revisión</h3>
+                                    <button @click="showInReviewModal = false" class="btn-close" aria-label="Cerrar">
+                                        <svg style="width: 24px; height: 24px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                </div>
+                                <div class="modal-body">
+                                    <p class="text-gray-600 mb-6">
+                                        ¿Estás seguro de desmarcar la solicitud #<span x-text="inReviewData.id" class="font-semibold"></span> de
+                                        "<span x-text="inReviewData.nombreCompleto" class="font-semibold"></span>" que ya había sido revisada? Ahora estará como <span class="font-semibold">En revisión</span>.
+                                    </p>
+                                    <div style="display: flex; justify-content: flex-end; gap: 12px;">
+                                        <button type="button" @click="showInReviewModal = false" class="btn-secondary">Cancelar</button>
+                                        <button type="button" class="btn-primary" @click="confirmInReview()">En Revisión</button>
                                     </div>
                                 </div>
                             </div>

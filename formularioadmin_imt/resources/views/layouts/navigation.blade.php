@@ -27,6 +27,9 @@
                     <x-nav-link :href="route('solicitudes')" :active="request()->routeIs('solicitudes')">
                         {{ __('Solicitudes') }}
                     </x-nav-link>
+                    <x-nav-link :href="route('correos')" :active="request()->routeIs('correos')">
+                        {{ __('Correos') }}
+                    </x-nav-link>
                 </div>
             </div>
 
@@ -93,6 +96,9 @@
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('solicitudes')" :active="request()->routeIs('solicitudes')">
                 {{ __('Solicitudes') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('correos')" :active="request()->routeIs('correos')">
+                {{ __('Correos') }}
             </x-responsive-nav-link>
         </div>
 

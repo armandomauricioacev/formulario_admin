@@ -371,4 +371,47 @@ class AdminController extends Controller
                 ->with('error', 'Error al eliminar la solicitud: ' . $e->getMessage());
         }
     }
+
+    /**
+     * Marca una solicitud como revisada.
+     */
+    public function solicitudesServiciosMarkReviewed($id)
+    {
+        try {
+            $solicitud = SolicitudesServicio::findOrFail($id);
+            $solicitud->estatus = SolicitudesServicio::ESTATUS_REVISADO;
+            $solicitud->fecha_actualizacion = now();
+            $solicitud->save();
+
+            // Respuesta JSON para facilitar actualización con Alpine
+            return response()->json([
+                'id' => $solicitud->id,
+                'estatus' => $solicitud->estatus,
+                'fecha_actualizacion' => optional($solicitud->fecha_actualizacion)->toIso8601String(),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Error al marcar como revisado: ' . $e->getMessage()], 422);
+        }
+    }
+
+    /**
+     * Revierte una solicitud a "En revisión".
+     */
+    public function solicitudesServiciosMarkInReview($id)
+    {
+        try {
+            $solicitud = SolicitudesServicio::findOrFail($id);
+            $solicitud->estatus = SolicitudesServicio::ESTATUS_EN_REVISION;
+            $solicitud->fecha_actualizacion = now();
+            $solicitud->save();
+
+            return response()->json([
+                'id' => $solicitud->id,
+                'estatus' => $solicitud->estatus,
+                'fecha_actualizacion' => optional($solicitud->fecha_actualizacion)->toIso8601String(),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Error al revertir a en revisión: ' . $e->getMessage()], 422);
+        }
+    }
 }

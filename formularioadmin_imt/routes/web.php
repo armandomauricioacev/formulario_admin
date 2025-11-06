@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\CorreoController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -104,6 +105,20 @@ Route::get('/solicitudes', [AdminController::class, 'solicitudesServiciosIndex']
 // Eliminar solicitud individual
 Route::delete('/solicitudes/{solicitud}', [AdminController::class, 'solicitudesServiciosDestroy'])
     ->middleware(['auth', 'verified'])->name('solicitudes.destroy');
+
+// Marcar solicitud como revisada
+Route::patch('/solicitudes/{solicitud}/revisado', [AdminController::class, 'solicitudesServiciosMarkReviewed'])
+    ->middleware(['auth', 'verified'])->name('solicitudes.revisado');
+
+// Revertir solicitud a en revisión
+Route::patch('/solicitudes/{solicitud}/en_revision', [AdminController::class, 'solicitudesServiciosMarkInReview'])
+    ->middleware(['auth', 'verified'])->name('solicitudes.en_revision');
+
+// ========== RUTAS DE CORREOS ==========
+Route::get('/correos', [CorreoController::class, 'index'])
+    ->middleware(['auth', 'verified'])->name('correos');
+Route::post('/correos', [CorreoController::class, 'update'])
+    ->middleware(['auth', 'verified'])->name('correos.update');
 
 // ========== RUTAS DE PERFIL ==========
 Route::middleware('auth')->group(function () {
