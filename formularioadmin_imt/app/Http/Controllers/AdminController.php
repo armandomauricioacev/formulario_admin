@@ -2,11 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\Coordinaciones;
-use App\Models\EntidadesProcedencia;
 use App\Models\Servicios;
 use App\Models\SolicitudesServicio;
+use Illuminate\Http\Request;
 
 class AdminController extends Controller
 {
@@ -346,16 +345,162 @@ class AdminController extends Controller
     }
 
     // ========== MÉTODOS PARA SOLICITUDES DE SERVICIOS ==========
-    public function solicitudesServiciosIndex()
+    public function solicitudesServiciosIndex(Request $request)
     {
-        $solicitudes = SolicitudesServicio::with(['entidadProcedencia', 'servicio', 'coordinacion'])
-            ->orderBy('fecha_solicitud', 'desc')
-            ->get();
+        // Parámetros de filtro desde la URL
+        $status = $request->query('status');
+        $servicioId = $request->query('servicio_id');
+        $servicioFlag = $request->query('servicio'); // cuando es "otros"
+        $coordinacionId = $request->query('coordinacion_id');
+        $fecha = $request->query('fecha'); // YYYY-MM-DD
+        $q = $request->query('q');
 
-        // Lista de coordinaciones para el filtro del select en la vista
+        $query = SolicitudesServicio::with(['entidadProcedencia', 'servicio', 'coordinacion'])
+            ->orderBy('fecha_solicitud', 'desc');
+
+        // Filtro de estatus
+        if (!empty($status) && $status !== 'todos') {
+            $query->where('estatus', $status);
+        }
+
+        // Filtro de servicio
+        if (!empty($servicioId)) {
+            $query->where('servicio_id', $servicioId);
+        } elseif (!empty($servicioFlag) && $servicioFlag === 'otros') {
+            // "Otros" = tiene servicio_otro o el servicio catalogado se llama "otro"
+            $query->where(function ($qq) {
+                $qq->whereNotNull('servicio_otro')
+                   ->where('servicio_otro', '!=', '');
+            })->orWhereHas('servicio', function ($s) {
+                $s->whereRaw('LOWER(nombre) = ?', ['otro']);
+            });
+        }
+
+        // Filtro de coordinación
+        if (!empty($coordinacionId)) {
+            $query->where('coordinacion_id', $coordinacionId);
+        }
+
+        // Filtro por fecha exacta (día)
+        if (!empty($fecha)) {
+            $query->whereDate('fecha_solicitud', $fecha);
+        }
+
+        // Búsqueda global en varias columnas y relaciones
+        if (!empty($q)) {
+            $like = '%' . $q . '%';
+            $query->where(function ($w) use ($like) {
+                $w->where('nombres', 'like', $like)
+                  ->orWhere('apellido_paterno', 'like', $like)
+                  ->orWhere('apellido_materno', 'like', $like)
+                  ->orWhere('telefono', 'like', $like)
+                  ->orWhere('correo_electronico', 'like', $like)
+                  ->orWhere('servicio_otro', 'like', $like)
+                  ->orWhere('estatus', 'like', $like);
+            })
+            ->orWhereHas('entidadProcedencia', function ($q2) use ($like) {
+                $q2->where('nombre', 'like', $like);
+            })
+            ->orWhereHas('servicio', function ($q3) use ($like) {
+                $q3->where('nombre', 'like', $like);
+            })
+            ->orWhereHas('coordinacion', function ($q4) use ($like) {
+                $q4->where('nombre', 'like', $like);
+            });
+        }
+
+        // Paginación, preservando los parámetros
+        $solicitudes = $query->paginate(15)->appends($request->query());
+
+        // Listas para filtros en la vista
         $coordinaciones = Coordinaciones::orderBy('nombre')->get();
+        $servicios = Servicios::orderBy('nombre')->get();
+        $otrosServicios = SolicitudesServicio::whereNotNull('servicio_otro')
+            ->where('servicio_otro', '!=', '')
+            ->distinct()
+            ->orderBy('servicio_otro')
+            ->pluck('servicio_otro');
 
-        return view('solicitudes_servicios', compact('solicitudes', 'coordinaciones'));
+        return view('solicitudes_servicios', [
+            'solicitudes' => $solicitudes,
+            'coordinaciones' => $coordinaciones,
+            'servicios' => $servicios,
+            'otrosServicios' => $otrosServicios,
+            'status' => $status,
+        ]);
+    }
+
+    // Nuevo endpoint JSON para filtrar/paginar en tiempo real
+    public function solicitudesServiciosData(Request $request)
+    {
+        $status = $request->query('status');
+        $servicioId = $request->query('servicio_id');
+        $servicioFlag = $request->query('servicio');
+        $coordinacionId = $request->query('coordinacion_id');
+        $fecha = $request->query('fecha');
+        $q = $request->query('q');
+        $perPage = (int) ($request->query('per_page', 15));
+
+        $query = SolicitudesServicio::with(['entidadProcedencia', 'servicio', 'coordinacion'])
+            ->orderBy('fecha_solicitud', 'desc');
+
+        if (!empty($status) && $status !== 'todos') {
+            $query->where('estatus', $status);
+        }
+        if (!empty($servicioId)) {
+            $query->where('servicio_id', $servicioId);
+        } elseif (!empty($servicioFlag) && $servicioFlag === 'otros') {
+            $query->where(function ($qq) {
+                $qq->whereNotNull('servicio_otro')
+                   ->where('servicio_otro', '!=', '');
+            })->orWhereHas('servicio', function ($s) {
+                $s->whereRaw('LOWER(nombre) = ?', ['otro']);
+            });
+        }
+        if (!empty($coordinacionId)) {
+            $query->where('coordinacion_id', $coordinacionId);
+        }
+        if (!empty($fecha)) {
+            $query->whereDate('fecha_solicitud', $fecha);
+        }
+        if (!empty($q)) {
+            $like = '%' . $q . '%';
+            $query->where(function ($w) use ($like) {
+                $w->where('nombres', 'like', $like)
+                  ->orWhere('apellido_paterno', 'like', $like)
+                  ->orWhere('apellido_materno', 'like', $like)
+                  ->orWhere('telefono', 'like', $like)
+                  ->orWhere('correo_electronico', 'like', $like)
+                  ->orWhere('servicio_otro', 'like', $like)
+                  ->orWhere('estatus', 'like', $like);
+            })
+            ->orWhereHas('entidadProcedencia', function ($q2) use ($like) {
+                $q2->where('nombre', 'like', $like);
+            })
+            ->orWhereHas('servicio', function ($q3) use ($like) {
+                $q3->where('nombre', 'like', $like);
+            })
+            ->orWhereHas('coordinacion', function ($q4) use ($like) {
+                $q4->where('nombre', 'like', $like);
+            });
+        }
+
+        $page = (int) $request->query('page', 1);
+        $paginator = $query->paginate($perPage, ['*'], 'page', $page);
+
+        // Calcular total global sin filtros (para mostrar "X de Y")
+        $totalAll = \App\Models\SolicitudesServicio::count();
+
+        return response()->json([
+            'data' => $paginator->items(),
+            'meta' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+                'total_all' => $totalAll,
+            ],
+        ]);
     }
 
     public function solicitudesServiciosDestroy($id)

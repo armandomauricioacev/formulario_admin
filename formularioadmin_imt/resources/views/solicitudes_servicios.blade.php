@@ -356,224 +356,19 @@
                             padding: 40px 20px;
                             color: #64748b;
                         }
-
-                        /* (El modal de limpiar filtros fue retirado por requerimiento) */
                     </style>
 
-                    <div x-data="{
-                        search: '',
-                        showFilters: false,
-                        statusFilter: '',
-                        dateFilter: '',
-                        coordinacionFilter: '',
-                        availableStatuses: [],
-                        solicitudes: {{ json_encode($solicitudes ?? []) }},
-                        coordinaciones: {{ json_encode($coordinaciones ?? []) }},
-                        totalRows: {{ isset($solicitudes) ? $solicitudes->count() : 0 }},
-                        visibleRows: {{ isset($solicitudes) ? $solicitudes->count() : 0 }},
-                        showDeleteModal: false,
-                        deleteData: {},
-                        showReviewedModal: false,
-                        reviewedData: {},
-                        showInReviewModal: false,
-                        inReviewData: {},
-                        
-                        openReviewedModal(solicitud) {
-                            const nombre = `${solicitud.nombres} ${solicitud.apellido_paterno} ${solicitud.apellido_materno || ''}`.trim();
-                            this.reviewedData = { id: solicitud.id, nombreCompleto: nombre, ref: solicitud };
-                            this.showReviewedModal = true;
-                        },
-                        openInReviewModal(solicitud) {
-                            const nombre = `${solicitud.nombres} ${solicitud.apellido_paterno} ${solicitud.apellido_materno || ''}`.trim();
-                            this.inReviewData = { id: solicitud.id, nombreCompleto: nombre, ref: solicitud };
-                            this.showInReviewModal = true;
-                        },
-                        async confirmReviewed() {
-                            try {
-                                const token = document.querySelector('meta[name=csrf-token]')?.getAttribute('content');
-                                const res = await fetch(`/solicitudes/${this.reviewedData.id}/revisado`, {
-                                    method: 'PATCH',
-                                    headers: {
-                                        'Content-Type': 'application/json',
-                                        'X-CSRF-TOKEN': token,
-                                        'Accept': 'application/json',
-                                    },
-                                    body: JSON.stringify({})
-                                });
-                                if (!res.ok) throw new Error('Respuesta no válida');
-                                const data = await res.json();
-                                this.reviewedData.ref.estatus = 'revisado';
-                                this.reviewedData.ref.fecha_actualizacion = data.fecha_actualizacion || this.reviewedData.ref.fecha_actualizacion;
-                                
-                                this.showReviewedModal = false;
-                            } catch (e) {
-                                console.error(e);
-                                alert('Ocurrió un error al marcar como revisado.');
-                            }
-                        },
-                        async confirmInReview() {
-                            try {
-                                const token = document.querySelector('meta[name=csrf-token]')?.getAttribute('content');
-                                const res = await fetch(`/solicitudes/${this.inReviewData.id}/en_revision`, {
-                                    method: 'PATCH',
-                                    headers: {
-                                        'Content-Type': 'application/json',
-                                        'X-CSRF-TOKEN': token,
-                                        'Accept': 'application/json',
-                                    },
-                                    body: JSON.stringify({})
-                                });
-                                if (!res.ok) throw new Error('Respuesta no válida');
-                                const data = await res.json();
-                                this.inReviewData.ref.estatus = 'en_revision';
-                                this.inReviewData.ref.fecha_actualizacion = data.fecha_actualizacion || this.inReviewData.ref.fecha_actualizacion;
-
-                                this.showInReviewModal = false;
-                            } catch (e) {
-                                console.error(e);
-                                alert('Ocurrió un error al revertir la solicitud a En Revisión.');
-                            }
-                        },
-                        openDeleteModal(solicitud) {
-                            const nombre = `${solicitud.nombres} ${solicitud.apellido_paterno} ${solicitud.apellido_materno || ''}`.trim();
-                            this.deleteData = { id: solicitud.id, nombreCompleto: nombre };
-                            this.showDeleteModal = true;
-                        },
-                        get filteredSolicitudes() {
-                            let items = [...this.solicitudes];
-
-                            /* Filtro por estatus */
-                            if (this.statusFilter) {
-                                const sf = this.statusFilter.toLowerCase();
-                                items = items.filter(s => (s.estatus || '').toLowerCase() === sf);
-                            }
-
-                            /* Filtro por fecha única de solicitud (día exacto) */
-                            if (this.dateFilter) {
-                                const start = new Date(this.dateFilter + 'T00:00:00');
-                                const end = new Date(this.dateFilter + 'T23:59:59');
-                                items = items.filter(s => {
-                                    const d = s.fecha_solicitud ? new Date(s.fecha_solicitud) : null;
-                                    return d && d >= start && d <= end;
-                                });
-                            }
-
-                            /* Filtro por coordinación */
-                            if (this.coordinacionFilter) {
-                                const cf = parseInt(this.coordinacionFilter, 10);
-                                items = items.filter(s => Number(s.coordinacion_id) === cf);
-                            }
-
-                            /* (Filtro por servicio eliminado por requerimiento) */
-
-                            if (!this.search) {
-                                this.visibleRows = items.length;
-                                return items.sort((a, b) => b.id - a.id);
-                            }
-                            const filtered = items.filter(solicitud => {
-                                const searchTerm = this.search.toLowerCase();
-                                const fullName = (solicitud.nombres + ' ' + solicitud.apellido_paterno + ' ' + (solicitud.apellido_materno || '')).toLowerCase();
-                                return fullName.includes(searchTerm) ||
-                                       (solicitud.telefono && solicitud.telefono.toLowerCase().includes(searchTerm)) ||
-                                       (solicitud.correo_electronico && solicitud.correo_electronico.toLowerCase().includes(searchTerm)) ||
-                                       (solicitud.entidad_procedencia && solicitud.entidad_procedencia.nombre && solicitud.entidad_procedencia.nombre.toLowerCase().includes(searchTerm)) ||
-                                       (solicitud.entidad_otra && solicitud.entidad_otra.toLowerCase().includes(searchTerm)) ||
-                                       (solicitud.servicio && solicitud.servicio.nombre && solicitud.servicio.nombre.toLowerCase().includes(searchTerm)) ||
-                                       (solicitud.servicio_otro && solicitud.servicio_otro.toLowerCase().includes(searchTerm)) ||
-                                       (solicitud.coordinacion && solicitud.coordinacion.nombre && solicitud.coordinacion.nombre.toLowerCase().includes(searchTerm)) ||
-                                       (solicitud.estatus && solicitud.estatus.toLowerCase().includes(searchTerm));
-                            });
-                            this.visibleRows = filtered.length;
-                            return filtered.sort((a, b) => b.id - a.id);
-                        },
-                        formatDate(dateString) {
-                            if (!dateString) return 'N/A';
-                            return new Date(dateString).toLocaleString('es-MX', {
-                                year: 'numeric',
-                                month: '2-digit',
-                                day: '2-digit',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                                hour12: true
-                            });
-                        },
-                        formatStatus(s) {
-                            const map = { 'en_revision': 'En revisión', 'revisado': 'Revisado' };
-                            const k = (s || '').toLowerCase();
-                            return map[k] ?? (s || 'N/A');
-                        },
-                        initStatuses() {
-                            // Lista de estatus permitidos
-                            this.availableStatuses = ['en_revision', 'revisado'];
-                        },
-                        initScrollSync() {
-                            this.$nextTick(() => {
-                                const top = this.$refs.topScroll;
-                                const innerTop = this.$refs.topScrollInner;
-                                const bottom = this.$refs.bottomScroll;
-                                const innerBottom = this.$refs.bottomScrollInner;
-                                const wrapper = this.$refs.tableWrapper;
-                                const table = this.$refs.customTable;
-
-                                const updateWidths = () => {
-                                    if (table) {
-                                        const w = table.scrollWidth;
-                                        if (innerTop) { 
-                                            innerTop.style.width = w + 'px'; 
-                                            innerTop.style.height = '1px'; 
-                                        }
-                                        if (innerBottom) { 
-                                            innerBottom.style.width = w + 'px'; 
-                                            innerBottom.style.height = '1px'; 
-                                        }
-                                    }
-                                };
-                                updateWidths();
-                                window.addEventListener('resize', updateWidths);
-
-                                let syncing = false;
-                                const setScroll = (el, val) => { 
-                                    if (el && el.scrollLeft !== val) el.scrollLeft = val; 
-                                };
-
-                                const onTopScroll = () => { 
-                                    if (syncing) return; 
-                                    syncing = true; 
-                                    setScroll(wrapper, top.scrollLeft); 
-                                    setScroll(bottom, top.scrollLeft); 
-                                    syncing = false; 
-                                };
-                                
-                                const onBottomScroll = () => { 
-                                    if (syncing) return; 
-                                    syncing = true; 
-                                    setScroll(wrapper, bottom.scrollLeft); 
-                                    setScroll(top, bottom.scrollLeft); 
-                                    syncing = false; 
-                                };
-                                
-                                const onWrapperScroll = () => { 
-                                    if (syncing) return; 
-                                    syncing = true; 
-                                    setScroll(top, wrapper.scrollLeft); 
-                                    setScroll(bottom, wrapper.scrollLeft); 
-                                    syncing = false; 
-                                };
-
-                                if (top) top.addEventListener('scroll', onTopScroll);
-                                if (bottom) bottom.addEventListener('scroll', onBottomScroll);
-                                if (wrapper) wrapper.addEventListener('scroll', onWrapperScroll);
-                            });
-                        },
-                        clearFilters() {
-                            // Limpieza inmediata sin confirmación
-                            this.statusFilter = '';
-                            this.dateFilter = '';
-                            this.coordinacionFilter = '';
-                            this.search = '';
-                            this.showFilters = false;
-                        }
-                    }" x-init="initStatuses(); initScrollSync()">
+                    <div x-data="solicitudesData()" x-init="initServerValues(); initScrollSync()"
+                         data-status='@json($status ?? "todos")'
+                         data-servicio='@json(request()->query("servicio", request()->query("servicio_id", "")))'
+                         data-solicitudes='@json(isset($solicitudes) ? $solicitudes->items() : [])'
+                         data-coordinaciones='@json(isset($coordinaciones) ? $coordinaciones : [])'
+                         data-servicios='@json($servicios)'
+                         data-otros-servicios='@json($otrosServicios ?? [])'
+                         data-total="{{ isset($solicitudes) ? $solicitudes->total() : 0 }}"
+                         data-visible="{{ isset($solicitudes) ? count($solicitudes->items()) : 0 }}"
+                         data-current="{{ isset($solicitudes) ? $solicitudes->currentPage() : 1 }}"
+                         data-last="{{ isset($solicitudes) ? $solicitudes->lastPage() : 1 }}">
 
                         <!-- Mensajes de sesión -->
                         @if(session('success'))
@@ -609,10 +404,11 @@
                                     x-model="search" 
                                     placeholder="Buscar solicitudes..." 
                                     class="search-input"
+                                    @input="onSearchInput"
                                 />
                             </div>
                             <div class="counter-text">
-                                <span x-text="`Mostrando ${visibleRows} de ${totalRows}`"></span>
+                                <span x-text="`Mostrando ${visibleRows} de ${totalRowsAll}`"></span>
                             </div>
                             <div>
                                 <button type="button" class="btn-filter" @click="showFilters = !showFilters">
@@ -625,8 +421,7 @@
                         <div class="filters-panel" x-show="showFilters" x-cloak>
                             <div class="filter-group">
                                 <label class="filter-label">Estatus</label>
-                                <select class="filter-input" x-model="statusFilter">
-                                    <option value="">Todos</option>
+                                <select class="filter-input" x-model="statusFilter" @change="onStatusChange">
                                     <template x-for="estatus in availableStatuses" :key="estatus">
                                         <option :value="estatus" x-text="formatStatus(estatus)"></option>
                                     </template>
@@ -634,15 +429,25 @@
                             </div>
                             <div class="filter-group">
                                 <label class="filter-label">Fecha de solicitud</label>
-                                <input type="date" class="filter-input" x-model="dateFilter" />
+                                <input type="date" class="filter-input" x-model="dateFilter" @change="onDateChange" />
                             </div>
                             <div class="filter-group">
                                 <label class="filter-label">Coordinación</label>
-                                <select class="filter-input" x-model="coordinacionFilter">
+                                <select class="filter-input" x-model="coordinacionFilter" @change="onCoordinacionChange">
                                     <option value="">Todas</option>
                                     <template x-for="c in coordinaciones" :key="c.id">
                                         <option :value="c.id" x-text="c.nombre"></option>
                                     </template>
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <label class="filter-label">Servicios</label>
+                                <select class="filter-input" x-model="servicioFilter" @change="onServiceChange">
+                                    <option value="">Todos</option>
+                                    <template x-for="s in servicios" :key="s.id">
+                                        <option :value="s.id" x-text="s.nombre"></option>
+                                    </template>
+                                    <option value="otros">Otros</option>
                                 </select>
                             </div>
                             <div class="filter-group" style="align-self: end;">
@@ -697,7 +502,6 @@
                                                     <button type="button" class="btn-primary" style="margin-right:8px"
                                                         x-show="(solicitud.estatus || '').toLowerCase() === 'revisado'"
                                                         @click="openInReviewModal(solicitud)">En Revisión</button>
-                                                    <button type="button" class="btn-delete" @click="openDeleteModal(solicitud)">Eliminar</button>
                                                 </td>
                                             </tr>
                                         </template>
@@ -717,34 +521,15 @@
                             <div class="table-scroll-inner" x-ref="bottomScrollInner"></div>
                         </div>
 
-                        <!-- Modal Confirmar Eliminación de Solicitud -->
-                        <div x-show="showDeleteModal" x-cloak class="modal-overlay" @click.self="showDeleteModal = false">
-                            <div class="modal-content">
-                                <div class="modal-header">
-                                    <h3 class="text-lg font-semibold">Confirmar Eliminación</h3>
-                                    <button @click="showDeleteModal = false" class="btn-close" aria-label="Cerrar">
-                                        <svg style="width: 24px; height: 24px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                                        </svg>
-                                    </button>
-                                </div>
-                                <div class="modal-body">
-                                    <p class="text-gray-600 mb-6">
-                                        ¿Estás seguro de eliminar la solicitud #<span x-text="deleteData.id" class="font-semibold"></span> de
-                                        "<span x-text="deleteData.nombreCompleto" class="font-semibold"></span>"?
-                                    </p>
-                                    <p class="text-sm text-red-600 mb-6">Esta acción no se puede deshacer.</p>
-                                    <div style="display: flex; justify-content: flex-end; gap: 12px;">
-                                        <button type="button" @click="showDeleteModal = false" class="btn-secondary">Cancelar</button>
-                                        <form method="POST" :action="`/solicitudes/${deleteData.id}`" style="display: inline;">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn-delete">Eliminar</button>
-                                        </form>
-                                    </div>
-                                </div>
+                        <br>
+                        <!-- Paginación accesible (sin recargar) -->
+                        <nav class="controls-container" aria-label="Paginación">
+                            <div style="display:flex;align-items:center;gap:12px;justify-content:flex-end;width:100%">
+                                <button type="button" class="btn-secondary" x-show="currentPage > 1" @click="goToPage(currentPage - 1)" aria-label="Página anterior">Anterior</button>
+                                <span class="counter-text" x-text="`Página ${currentPage} de ${lastPage}`"></span>
+                                <button type="button" class="btn-secondary" x-show="currentPage < lastPage" @click="goToPage(currentPage + 1)" aria-label="Página siguiente">Siguiente</button>
                             </div>
-                        </div>
+                        </nav>
 
                         <!-- Modal Confirmar Revisado -->
                         <div x-show="showReviewedModal" x-cloak class="modal-overlay" @click.self="showReviewedModal = false">
@@ -775,7 +560,7 @@
                             <div class="modal-content">
                                 <div class="modal-header">
                                     <h3 class="text-lg font-semibold">Confirmar En Revisión</h3>
-                                    <button @click="showInReviewModal = false" class="btn-close" aria-label="Cerrar">
+                                    <button @click="showInReviewModal" class="btn-close" aria-label="Cerrar">
                                         <svg style="width: 24px; height: 24px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                                         </svg>
@@ -794,10 +579,6 @@
                             </div>
                         </div>
 
-                        
-
-                        <!-- (Modal de limpiar filtros removido por requerimiento) -->
-
                     </div>
                 </div>
             </div>
@@ -805,6 +586,402 @@
     </div>
 
     <script>
+        function solicitudesData() {
+            return {
+                // Estado inicial (vacío, se llenará desde data attributes)
+                search: '',
+                showFilters: false,
+                statusFilter: '',
+                dateFilter: '',
+                coordinacionFilter: '',
+                servicioFilter: '',
+                availableStatuses: ['todos', 'en_revision', 'revisado'],
+                solicitudes: [],
+                coordinaciones: [],
+                servicios: [],
+                otrosServicios: [],
+                totalRows: 0,
+                totalRowsAll: 0,
+                visibleRows: 0,
+                currentPage: 1,
+                lastPage: 1,
+                showReviewedModal: false,
+                reviewedData: {},
+                showInReviewModal: false,
+                inReviewData: {},
+                apiUrl: '/solicitudes/data',
+                loading: false,
+
+                /**
+                 * Inicializa todos los valores desde los data attributes del elemento
+                 */
+                initServerValues() {
+                    const d = this.$el.dataset;
+                    
+                    // Parsear valores JSON de forma segura
+                    try {
+                        this.statusFilter = JSON.parse(d.status ?? '"todos"');
+                    } catch (e) {
+                        this.statusFilter = d.status || 'todos';
+                    }
+
+                    try {
+                        this.servicioFilter = JSON.parse(d.servicio ?? '""');
+                    } catch (e) {
+                        this.servicioFilter = d.servicio || '';
+                    }
+
+                    try {
+                        this.solicitudes = JSON.parse(d.solicitudes ?? '[]');
+                    } catch (e) {
+                        this.solicitudes = [];
+                    }
+
+                    try {
+                        this.coordinaciones = JSON.parse(d.coordinaciones ?? '[]');
+                    } catch (e) {
+                        this.coordinaciones = [];
+                    }
+
+                    try {
+                        this.servicios = JSON.parse(d.servicios ?? '[]');
+                    } catch (e) {
+                        this.servicios = [];
+                    }
+
+                    try {
+                        this.otrosServicios = JSON.parse(d.otrosServicios ?? '[]');
+                    } catch (e) {
+                        this.otrosServicios = [];
+                    }
+
+                    // Parsear valores numéricos
+                    this.totalRows = Number(d.total ?? 0);
+                    this.totalRowsAll = Number(d.total ?? 0);
+                    this.visibleRows = Number(d.visible ?? 0);
+                    this.currentPage = Number(d.current ?? 1);
+                    this.lastPage = Number(d.last ?? 1);
+
+                    // Cargar parámetros actuales del URL en los filtros para mantenerlos visibles
+                    const url = new URL(window.location.href);
+                    this.search = url.searchParams.get('q') || '';
+                    this.dateFilter = url.searchParams.get('fecha') || '';
+                    this.coordinacionFilter = url.searchParams.get('coordinacion_id') || '';
+                    // No abrir panel de filtros automáticamente
+                    // this.showFilters = false;
+                    // Obtener totales globales y datos iniciales del endpoint
+                    this.fetchSolicitudes(this.currentPage);
+                 },
+
+                /** Construye los parámetros de consulta según el estado actual */
+                buildParams(page = 1) {
+                    const params = new URLSearchParams();
+                    if (this.search) params.set('q', this.search.trim());
+                    if (this.dateFilter) params.set('fecha', this.dateFilter);
+                    if (this.coordinacionFilter) params.set('coordinacion_id', this.coordinacionFilter);
+                    if (this.statusFilter && this.statusFilter !== 'todos') params.set('status', this.statusFilter);
+                    const val = String(this.servicioFilter || '').trim();
+                    if (val) {
+                        const isNumeric = /^[0-9]+$/.test(val);
+                        if (isNumeric) {
+                            params.set('servicio_id', val);
+                        } else if (val === 'otros') {
+                            params.set('servicio', 'otros');
+                        }
+                    }
+                    if (page && page > 1) params.set('page', String(page));
+                    return params;
+                },
+
+                /** Actualiza la URL sin recargar la página */
+                updateUrlParams(params) {
+                    const url = new URL(window.location.href);
+                    url.search = params.toString();
+                    history.replaceState({}, '', url.toString());
+                },
+
+                /** Obtiene solicitudes del servidor con filtros actuales */
+                async fetchSolicitudes(page = 1) {
+                    try {
+                        this.loading = true;
+                        const params = this.buildParams(page);
+                        this.updateUrlParams(params);
+                        const res = await fetch(`${this.apiUrl}?${params.toString()}`, {
+                            headers: { 'Accept': 'application/json' }
+                        });
+                        if (!res.ok) throw new Error('Error al obtener datos');
+                        const json = await res.json();
+                        this.solicitudes = Array.isArray(json.data) ? json.data : [];
+                        const meta = json.meta || {};
+                        this.currentPage = meta.current_page || 1;
+                        this.lastPage = meta.last_page || 1;
+                        this.totalRows = meta.total || this.solicitudes.length;
+                        this.totalRowsAll = (meta.total_all !== undefined) ? meta.total_all : this.totalRowsAll;
+                        this.visibleRows = this.solicitudes.length;
+                    } catch (e) {
+                        console.error(e);
+                        alert('Ocurrió un error al aplicar filtros.');
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                /** Aplica filtros y recarga datos de la página 1 */
+                applyFilters() {
+                    this.fetchSolicitudes(1);
+                },
+
+                /** Navega a una página específica sin recargar */
+                goToPage(page) {
+                    if (!page || page < 1 || page > this.lastPage) return;
+                    this.fetchSolicitudes(page);
+                },
+
+                /** Maneja cambios en el filtro de estatus */
+                onStatusChange() {
+                    this.applyFilters();
+                },
+
+                /** Maneja cambios en el filtro de servicio */
+                onServiceChange() {
+                    this.applyFilters();
+                },
+
+                /** Maneja cambios en coordinación */
+                onCoordinacionChange() {
+                    this.applyFilters();
+                },
+
+                /** Maneja cambios en fecha */
+                onDateChange() {
+                    this.applyFilters();
+                },
+
+                /** Maneja búsqueda con debounce */
+                searchDebounceId: null,
+                onSearchInput() {
+                    clearTimeout(this.searchDebounceId);
+                    this.searchDebounceId = setTimeout(() => this.applyFilters(), 300);
+                },
+
+                /**
+                 * Abre el modal para marcar como revisado
+                 */
+                openReviewedModal(solicitud) {
+                    const nombre = `${solicitud.nombres} ${solicitud.apellido_paterno} ${solicitud.apellido_materno || ''}`.trim();
+                    this.reviewedData = {
+                        id: solicitud.id,
+                        nombreCompleto: nombre,
+                        ref: solicitud
+                    };
+                    this.showReviewedModal = true;
+                },
+
+                /**
+                 * Abre el modal para revertir a "En Revisión"
+                 */
+                openInReviewModal(solicitud) {
+                    const nombre = `${solicitud.nombres} ${solicitud.apellido_paterno} ${solicitud.apellido_materno || ''}`.trim();
+                    this.inReviewData = {
+                        id: solicitud.id,
+                        nombreCompleto: nombre,
+                        ref: solicitud
+                    };
+                    this.showInReviewModal = true;
+                },
+
+                /**
+                 * Confirma y marca la solicitud como revisada
+                 */
+                async confirmReviewed() {
+                    try {
+                        const token = document.querySelector('meta[name=csrf-token]')?.getAttribute('content');
+                        const res = await fetch(`/solicitudes/${this.reviewedData.id}/revisado`, {
+                            method: 'PATCH',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': token,
+                                'Accept': 'application/json',
+                            },
+                            body: JSON.stringify({})
+                        });
+
+                        if (!res.ok) {
+                            throw new Error('Respuesta no válida');
+                        }
+
+                        const data = await res.json();
+                        
+                        // Actualizar el estado local
+                        this.reviewedData.ref.estatus = 'revisado';
+                        this.reviewedData.ref.fecha_actualizacion = data.fecha_actualizacion || this.reviewedData.ref.fecha_actualizacion;
+                        
+                        this.showReviewedModal = false;
+                    } catch (e) {
+                        console.error(e);
+                        alert('Ocurrió un error al marcar como revisado.');
+                    }
+                },
+
+                /**
+                 * Confirma y revierte la solicitud a "En Revisión"
+                 */
+                async confirmInReview() {
+                    try {
+                        const token = document.querySelector('meta[name=csrf-token]')?.getAttribute('content');
+                        const res = await fetch(`/solicitudes/${this.inReviewData.id}/en_revision`, {
+                            method: 'PATCH',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': token,
+                                'Accept': 'application/json',
+                            },
+                            body: JSON.stringify({})
+                        });
+
+                        if (!res.ok) {
+                            throw new Error('Respuesta no válida');
+                        }
+
+                        const data = await res.json();
+                        
+                        // Actualizar el estado local
+                        this.inReviewData.ref.estatus = 'en_revision';
+                        this.inReviewData.ref.fecha_actualizacion = data.fecha_actualizacion || this.inReviewData.ref.fecha_actualizacion;
+                        
+                        this.showInReviewModal = false;
+                    } catch (e) {
+                        console.error(e);
+                        alert('Ocurrió un error al revertir la solicitud a En Revisión.');
+                    }
+                },
+
+                /**
+                 * Computed property: solicitudes filtradas
+                 */
+                get filteredSolicitudes() {
+                    // Los datos ya vienen filtrados y paginados desde el servidor
+                    this.visibleRows = this.solicitudes.length;
+                    return [...this.solicitudes].sort((a, b) => b.id - a.id);
+                },
+
+                /**
+                 * Formatea una fecha para mostrarla
+                 */
+                formatDate(dateString) {
+                    if (!dateString) return 'N/A';
+                    
+                    return new Date(dateString).toLocaleString('es-MX', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: true
+                    });
+                },
+
+                /**
+                 * Formatea el texto de un estatus
+                 */
+                formatStatus(s) {
+                    const map = {
+                        'todos': 'Todos',
+                        'en_revision': 'En revisión',
+                        'revisado': 'Revisado'
+                    };
+                    const k = (s || '').toLowerCase();
+                    return map[k] ?? (s || 'N/A');
+                },
+
+                /**
+                 * Inicializa la sincronización de scrolls
+                 */
+                initScrollSync() {
+                    this.$nextTick(() => {
+                        const top = this.$refs.topScroll;
+                        const innerTop = this.$refs.topScrollInner;
+                        const bottom = this.$refs.bottomScroll;
+                        const innerBottom = this.$refs.bottomScrollInner;
+                        const wrapper = this.$refs.tableWrapper;
+                        const table = this.$refs.customTable;
+
+                        const updateWidths = () => {
+                            if (table) {
+                                const w = table.scrollWidth;
+                                if (innerTop) {
+                                    innerTop.style.width = w + 'px';
+                                    innerTop.style.height = '1px';
+                                }
+                                if (innerBottom) {
+                                    innerBottom.style.width = w + 'px';
+                                    innerBottom.style.height = '1px';
+                                }
+                            }
+                        };
+
+                        updateWidths();
+                        window.addEventListener('resize', updateWidths);
+
+                        let syncing = false;
+                        const setScroll = (el, val) => {
+                            if (el && el.scrollLeft !== val) {
+                                el.scrollLeft = val;
+                            }
+                        };
+
+                        const onTopScroll = () => {
+                            if (syncing) return;
+                            syncing = true;
+                            setScroll(wrapper, top.scrollLeft);
+                            setScroll(bottom, top.scrollLeft);
+                            syncing = false;
+                        };
+
+                        const onBottomScroll = () => {
+                            if (syncing) return;
+                            syncing = true;
+                            setScroll(wrapper, bottom.scrollLeft);
+                            setScroll(top, bottom.scrollLeft);
+                            syncing = false;
+                        };
+
+                        const onWrapperScroll = () => {
+                            if (syncing) return;
+                            syncing = true;
+                            setScroll(top, wrapper.scrollLeft);
+                            setScroll(bottom, wrapper.scrollLeft);
+                            syncing = false;
+                        };
+
+                        if (top) top.addEventListener('scroll', onTopScroll);
+                        if (bottom) bottom.addEventListener('scroll', onBottomScroll);
+                        if (wrapper) wrapper.addEventListener('scroll', onWrapperScroll);
+                    });
+                },
+
+                /**
+                 * Limpia todos los filtros
+                 */
+                clearFilters() {
+                    this.statusFilter = 'todos';
+                    this.dateFilter = '';
+                    this.coordinacionFilter = '';
+                    this.servicioFilter = '';
+                    this.search = '';
+                    // No abrir panel de filtros automáticamente
+                    this.showFilters = false;
+                    // Actualizar URL sin parámetros y cargar primera página sin recargar
+                    const params = new URLSearchParams();
+                    this.updateUrlParams(params);
+                    this.fetchSolicitudes(1);
+                }
+            };
+        }
+
+        /**
+         * Inicializa la animación de carga de la tabla
+         */
         document.addEventListener('DOMContentLoaded', function() {
             const container = document.getElementById('tableContainer');
             if (container) {

@@ -1,8 +1,8 @@
 <?php
 
-use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\CorreoController;
+use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -101,6 +101,10 @@ Route::delete('/servicios/{servicio}', [AdminController::class, 'serviciosDestro
 
 Route::get('/solicitudes', [AdminController::class, 'solicitudesServiciosIndex'])
     ->middleware(['auth', 'verified'])->name('solicitudes');
+
+// Nuevo endpoint JSON para filtros en tiempo real
+Route::get('/solicitudes/data', [AdminController::class, 'solicitudesServiciosData'])
+    ->middleware(['auth', 'verified'])->name('solicitudes.data');
 
 // Eliminar solicitud individual
 Route::delete('/solicitudes/{solicitud}', [AdminController::class, 'solicitudesServiciosDestroy'])
