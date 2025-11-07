@@ -400,6 +400,28 @@
                             border-color: #3b82f6;
                             box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
                         }
+
+                        .toast-success { background: #16a34a; }
+                        .toast-error { background: #dc2626; }
+
+                        .alert {
+                            padding: 12px 16px;
+                            border-radius: 6px;
+                            margin-bottom: 20px;
+                            font-size: 14px;
+                        }
+
+                        .alert-success {
+                            background: #d1fae5;
+                            color: #065f46;
+                            border: 1px solid #a7f3d0;
+                        }
+
+                        .alert-error {
+                            background: #fee2e2;
+                            color: #991b1b;
+                            border: 1px solid #fca5a5;
+                        }
                     </style>
 
                     <div x-data="solicitudesData()" x-init="initServerValues(); initScrollSync()"
@@ -412,22 +434,30 @@
                          data-total="{{ isset($solicitudes) ? $solicitudes->total() : 0 }}"
                          data-visible="{{ isset($solicitudes) ? count($solicitudes->items()) : 0 }}"
                          data-current="{{ isset($solicitudes) ? $solicitudes->currentPage() : 1 }}"
-                         data-last="{{ isset($solicitudes) ? $solicitudes->lastPage() : 1 }}">
+                         data-last="{{ isset($solicitudes) ? $solicitudes->lastPage() : 1 }}"
+                         class="container">
+                         
+                         <!-- Notificación interna (banner unificado con .alert) -->
+                         <div x-show="toast.show" x-transition.opacity.duration.150ms class="alert" :class="toast.type === 'success' ? 'alert-success' : 'alert-error'">
+                             <span x-text="toast.message"></span>
+                         </div>
+
+
 
                         @if(session('success'))
-                            <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
+                            <div class="alert alert-success">
                                 {{ session('success') }}
                             </div>
                         @endif
 
                         @if(session('error'))
-                            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                            <div class="alert alert-error">
                                 {{ session('error') }}
                             </div>
                         @endif
 
                         @if($errors->any())
-                            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                            <div class="alert alert-error">
                                 <ul class="list-disc list-inside">
                                     @foreach($errors->all() as $error)
                                         <li>{{ $error }}</li>
@@ -693,9 +723,22 @@
                 showInReviewModal: false,
                 inReviewData: {},
                 showAssignModal: false,
-                assignData: {},
-
-                initServerValues() {
+                 assignData: {},
+                 toast: { show: false, message: '', type: 'success', timer: null },
+                 notify(msg, type = 'success') {
+                     this.toast.message = msg;
+                     this.toast.type = type;
+                     this.toast.show = true;
+                     if (this.toast.timer) {
+                         clearTimeout(this.toast.timer);
+                     }
+                     this.toast.timer = setTimeout(() => {
+                         this.toast.show = false;
+                         this.toast.timer = null;
+                     }, 4000);
+                 },
+ 
+                 initServerValues() {
                     const d = this.$el.dataset;
                     
                     try {
@@ -788,7 +831,7 @@
 
                 async confirmAssign() {
                     if (!this.assignData.selectedCoordinacion) {
-                        alert('Por favor selecciona una coordinación.');
+                        this.notify('Por favor selecciona una coordinación.', 'error');
                         return;
                     }
 
@@ -819,10 +862,10 @@
                         this.assignData.ref.fecha_actualizacion = data.fecha_actualizacion;
                         
                         this.showAssignModal = false;
-                        alert('Coordinación asignada exitosamente.');
+                        this.notify('Coordinación asignada exitosamente.', 'success');
                     } catch (e) {
                         console.error(e);
-                        alert('Ocurrió un error al asignar la coordinación: ' + e.message);
+                        this.notify('Ocurrió un error al asignar la coordinación: ' + e.message, 'error');
                     }
                 },
 
@@ -871,7 +914,7 @@
                         this.showReviewedModal = false;
                     } catch (e) {
                         console.error(e);
-                        alert('Ocurrió un error al marcar como revisado.');
+                        this.notify('Ocurrió un error al marcar como revisado.', 'error');
                     }
                 },
 
@@ -900,7 +943,7 @@
                         this.showInReviewModal = false;
                     } catch (e) {
                         console.error(e);
-                        alert('Ocurrió un error al revertir la solicitud a En Revisión.');
+                        this.notify('Ocurrió un error al revertir la solicitud a En Revisión.', 'error');
                     }
                 },
 
