@@ -15,21 +15,23 @@
                     <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                         {{ __('Panel') }}
                     </x-nav-link>
-                    <x-nav-link :href="route('entidades-procedencia')" :active="request()->routeIs('entidades-procedencia')">
-                        {{ __('Entidades de Procedencia') }}
-                    </x-nav-link>
-                    <x-nav-link :href="route('coordinaciones')" :active="request()->routeIs('coordinaciones')">
-                        {{ __('Coordinaciones') }}
-                    </x-nav-link>
-                    <x-nav-link :href="route('servicios')" :active="request()->routeIs('servicios')">
-                        {{ __('Servicios') }}
-                    </x-nav-link>
                     <x-nav-link :href="route('solicitudes')" :active="request()->routeIs('solicitudes')">
                         {{ __('Solicitudes') }}
                     </x-nav-link>
-                    <x-nav-link :href="route('correos')" :active="request()->routeIs('correos')">
-                        {{ __('Correos') }}
-                    </x-nav-link>
+                    @if(Auth::user() && Auth::user()->role === 'superadmin')
+                        <x-nav-link :href="route('entidades-procedencia')" :active="request()->routeIs('entidades-procedencia')">
+                            {{ __('Entidades de Procedencia') }}
+                        </x-nav-link>
+                        <x-nav-link :href="route('coordinaciones')" :active="request()->routeIs('coordinaciones')">
+                            {{ __('Coordinaciones') }}
+                        </x-nav-link>
+                        <x-nav-link :href="route('servicios')" :active="request()->routeIs('servicios')">
+                            {{ __('Servicios') }}
+                        </x-nav-link>
+                        <x-nav-link :href="route('correos')" :active="request()->routeIs('correos')">
+                            {{ __('Correos') }}
+                        </x-nav-link>
+                    @endif
                 </div>
             </div>
 
@@ -85,21 +87,23 @@
             <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                 {{ __('Panel') }}
             </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('coordinaciones')" :active="request()->routeIs('coordinaciones')">
-                {{ __('Coordinaciones') }}
-            </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('entidades-procedencia')" :active="request()->routeIs('entidades-procedencia')">
-                {{ __('Entidades de Procedencia') }}
-            </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('servicios')" :active="request()->routeIs('servicios')">
-                {{ __('Servicios') }}
-            </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('solicitudes')" :active="request()->routeIs('solicitudes')">
                 {{ __('Solicitudes') }}
             </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('correos')" :active="request()->routeIs('correos')">
-                {{ __('Correos') }}
-            </x-responsive-nav-link>
+            @if(Auth::user() && Auth::user()->role === 'superadmin')
+                <x-responsive-nav-link :href="route('coordinaciones')" :active="request()->routeIs('coordinaciones')">
+                    {{ __('Coordinaciones') }}
+                </x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('entidades-procedencia')" :active="request()->routeIs('entidades-procedencia')">
+                    {{ __('Entidades de Procedencia') }}
+                </x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('servicios')" :active="request()->routeIs('servicios')">
+                    {{ __('Servicios') }}
+                </x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('correos')" :active="request()->routeIs('correos')">
+                    {{ __('Correos') }}
+                </x-responsive-nav-link>
+            @endif
         </div>
 
         <!-- Responsive Settings Options -->

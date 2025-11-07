@@ -753,6 +753,16 @@
                                         <label class="form-label">Correo del Representante</label>
                                         <input type="email" name="correo_representante" class="form-input" x-model="repData.correo_representante" />
                                     </div>
+                                    <!-- Nueva sección: contraseña para crear/actualizar usuario admin -->
+                                    <div class="form-group">
+                                        <label class="form-label">Contraseña del Admin</label>
+                                        <input type="password" name="password" class="form-input" placeholder="Mínimo 8 caracteres" />
+                                        <p class="text-xs text-gray-500 mt-1">Si el usuario no existe, esta contraseña se usará para crearlo. Si ya existe y desea actualizarla, ingrésela aquí.</p>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Confirmar Contraseña</label>
+                                        <input type="password" name="password_confirmation" class="form-input" />
+                                    </div>
                                     <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;">
                                         <button type="button" @click="showRepresentanteModal = false" class="btn-secondary">Cancelar</button>
                                         <button type="submit" class="btn-primary">Confirmar</button>

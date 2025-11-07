@@ -6,7 +6,9 @@ use App\Models\Coordinaciones;
 use App\Models\Servicios;
 use App\Models\SolicitudesServicio;
 use App\Models\EntidadesProcedencia;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 
 class AdminController extends Controller
 {
@@ -198,16 +200,62 @@ class AdminController extends Controller
         $request->validate([
             'representante' => 'nullable|string|max:255',
             'correo_representante' => 'nullable|email|max:255',
+            'password' => 'nullable|string|min:8|confirmed',
         ]);
 
         try {
+            // Actualizar representante global en todas las coordinaciones
             Coordinaciones::query()->update([
                 'representante' => $request->representante,
                 'correo_representante' => $request->correo_representante,
             ]);
 
+            $newName = $request->representante;
+            $newEmail = $request->correo_representante;
+            $newPassword = $request->password;
+            $message = 'Representante actualizado exitosamente.';
+
+            if (!empty($newEmail)) {
+                // Demote cualquier admin previo que no sea el nuevo representante
+                User::where('role', 'admin')
+                    ->where('email', '!=', $newEmail)
+                    ->update(['role' => 'superadmin']);
+
+                // Promover/crear el usuario admin con el correo del representante
+                $repUser = User::where('email', $newEmail)->first();
+                if ($repUser) {
+                    if (!empty($newName)) {
+                        $repUser->name = $newName;
+                    }
+                    if (!empty($newPassword)) {
+                        $repUser->password = Hash::make($newPassword);
+                    }
+                    $repUser->role = 'admin';
+                    $repUser->save();
+                    $message = 'Representante actualizado y usuario asignado/actualizado con rol administrador.';
+                } else {
+                    if (empty($newPassword)) {
+                        return redirect()->route('coordinaciones')
+                            ->with('error', 'Para crear el usuario del representante, ingrese una contraseña.');
+                    }
+
+                    User::create([
+                        'name' => !empty($newName) ? $newName : 'Representante',
+                        'email' => $newEmail,
+                        'password' => Hash::make($newPassword),
+                        'role' => 'admin',
+                    ]);
+
+                    $message = 'Representante actualizado y usuario administrador creado.';
+                }
+            } else {
+                // Si se elimina el correo del representante, remover privilegios de admin
+                User::where('role', 'admin')->update(['role' => 'superadmin']);
+                $message = 'Representante eliminado. Se removieron privilegios de administrador.';
+            }
+
             return redirect()->route('coordinaciones')
-                ->with('success', 'Representante actualizado exitosamente.');
+                ->with('success', $message);
         } catch (\Exception $e) {
             return redirect()->route('coordinaciones')
                 ->with('error', 'Error al actualizar el representante: ' . $e->getMessage());
