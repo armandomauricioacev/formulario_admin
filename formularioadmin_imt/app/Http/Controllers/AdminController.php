@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Coordinaciones;
 use App\Models\Servicios;
 use App\Models\SolicitudesServicio;
+use App\Models\EntidadesProcedencia;
 use Illuminate\Http\Request;
 
 class AdminController extends Controller
