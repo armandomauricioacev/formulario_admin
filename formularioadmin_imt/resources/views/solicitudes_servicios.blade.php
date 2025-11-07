@@ -19,8 +19,8 @@
                             background: white;
                             touch-action: pan-x;
                             overscroll-behavior-x: contain;
-                            scrollbar-width: none; /* Firefox */
-                            -ms-overflow-style: none; /* IE y Edge */
+                            scrollbar-width: none;
+                            -ms-overflow-style: none;
                         }
 
                         .table-wrapper::-webkit-scrollbar { 
@@ -41,7 +41,6 @@
                             opacity: 1;
                         }
 
-                        /* Scrolls superiores e inferiores */
                         .table-scroll-top {
                             width: 100%;
                             overflow-x: auto;
@@ -140,7 +139,6 @@
                             font-size: 14px;
                         }
 
-                        /* Botón y panel de filtros (estilo igual a Líneas de Captura) */
                         .btn-filter {
                             background: #6b7280;
                             color: #ffffff;
@@ -175,7 +173,6 @@
                             background: white;
                         }
 
-                        /* Botones primario/secundario (consistentes con Líneas de Captura) */
                         .btn-primary {
                             background: #3b82f6;
                             color: #ffffff;
@@ -202,7 +199,19 @@
                         }
                         .btn-secondary:hover { background: #4b5563; }
 
-                        /* Modales (consistentes con otras vistas) */
+                        .btn-warning {
+                            background: #f59e0b;
+                            color: #ffffff;
+                            padding: 8px 12px;
+                            border-radius: 6px;
+                            border: none;
+                            font-size: 14px;
+                            font-weight: 600;
+                            cursor: pointer;
+                            transition: background 0.2s ease;
+                        }
+                        .btn-warning:hover { background: #d97706; }
+
                         .modal-overlay {
                             position: fixed;
                             inset: 0;
@@ -252,7 +261,6 @@
                         }
                         .btn-delete:hover { background: #dc2626; }
 
-                        /* Igualar tamaño de botones en modales de eliminación */
                         .modal-body .btn-secondary,
                         .modal-body .btn-delete {
                             min-width: 120px;
@@ -303,7 +311,6 @@
                             background: #f9fafb;
                         }
 
-                        /* Estilos compactos y uniformes */
                         .compact-table th, .compact-table td {
                             padding: 8px 10px;
                             line-height: 1.25;
@@ -328,21 +335,30 @@
                             font-weight: 500;
                             text-transform: capitalize;
                         }
-                        /* Badges de los estatus permitidos */
                         .status-en_revision {
-                            background-color: #dbeafe; /* azul claro */
-                            color: #1e40af; /* azul oscuro */
+                            background-color: #dbeafe;
+                            color: #1e40af;
                         }
                         .status-revisado {
-                            background-color: #d1fae5; /* verde claro */
-                            color: #065f46; /* verde oscuro */
+                            background-color: #d1fae5;
+                            color: #065f46;
                         }
 
-                        /* Compatibilidad temporal con estados anteriores */
                         .status-pendiente { background-color: #fef3c7; color: #92400e; }
                         .status-en_proceso { background-color: #dbeafe; color: #1e40af; }
                         .status-completado { background-color: #d1fae5; color: #065f46; }
                         .status-cancelado { background-color: #fee2e2; color: #991b1b; }
+
+                        .service-badge {
+                            display: inline-block;
+                            background: #fef3c7;
+                            color: #92400e;
+                            padding: 2px 8px;
+                            border-radius: 12px;
+                            font-size: 11px;
+                            font-weight: 500;
+                            margin-left: 6px;
+                        }
 
                         .no-results {
                             text-align: center;
@@ -355,6 +371,34 @@
                             text-align: center;
                             padding: 40px 20px;
                             color: #64748b;
+                        }
+
+                        .form-group {
+                            margin-bottom: 16px;
+                        }
+
+                        .form-label {
+                            display: block;
+                            font-size: 14px;
+                            font-weight: 500;
+                            color: #374151;
+                            margin-bottom: 6px;
+                        }
+
+                        .form-select {
+                            width: 100%;
+                            padding: 8px 12px;
+                            border: 1px solid #d1d5db;
+                            border-radius: 6px;
+                            font-size: 14px;
+                            background: white;
+                            cursor: pointer;
+                        }
+
+                        .form-select:focus {
+                            outline: none;
+                            border-color: #3b82f6;
+                            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
                         }
                     </style>
 
@@ -370,7 +414,6 @@
                          data-current="{{ isset($solicitudes) ? $solicitudes->currentPage() : 1 }}"
                          data-last="{{ isset($solicitudes) ? $solicitudes->lastPage() : 1 }}">
 
-                        <!-- Mensajes de sesión -->
                         @if(session('success'))
                             <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
                                 {{ session('success') }}
@@ -393,7 +436,6 @@
                             </div>
                         @endif
 
-                        <!-- Controles: búsqueda + contador -->
                         <div class="controls-container">
                             <div class="search-container">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="search-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -404,11 +446,10 @@
                                     x-model="search" 
                                     placeholder="Buscar solicitudes..." 
                                     class="search-input"
-                                    @input="onSearchInput"
                                 />
                             </div>
                             <div class="counter-text">
-                                <span x-text="`Mostrando ${visibleRows} de ${totalRowsAll}`"></span>
+                                <span x-text="`Mostrando ${visibleRows} de ${totalRows}`"></span>
                             </div>
                             <div>
                                 <button type="button" class="btn-filter" @click="showFilters = !showFilters">
@@ -417,7 +458,6 @@
                             </div>
                         </div>
 
-                        <!-- Panel de filtros -->
                         <div class="filters-panel" x-show="showFilters" x-cloak>
                             <div class="filter-group">
                                 <label class="filter-label">Estatus</label>
@@ -429,11 +469,11 @@
                             </div>
                             <div class="filter-group">
                                 <label class="filter-label">Fecha de solicitud</label>
-                                <input type="date" class="filter-input" x-model="dateFilter" @change="onDateChange" />
+                                <input type="date" class="filter-input" x-model="dateFilter" />
                             </div>
                             <div class="filter-group">
                                 <label class="filter-label">Coordinación</label>
-                                <select class="filter-input" x-model="coordinacionFilter" @change="onCoordinacionChange">
+                                <select class="filter-input" x-model="coordinacionFilter">
                                     <option value="">Todas</option>
                                     <template x-for="c in coordinaciones" :key="c.id">
                                         <option :value="c.id" x-text="c.nombre"></option>
@@ -458,12 +498,10 @@
                             </div>
                         </div>
 
-                        <!-- Scroll superior -->
                         <div class="table-scroll-top" x-ref="topScroll">
                             <div class="table-scroll-inner" x-ref="topScrollInner"></div>
                         </div>
 
-                        <!-- Tabla -->
                         <div id="tableContainer" class="table-container">
                             <div class="table-wrapper" x-ref="tableWrapper">
                                 <table class="data-table compact-table" x-ref="customTable">
@@ -489,13 +527,19 @@
                                                 <td x-text="solicitud.telefono"></td>
                                                 <td x-text="solicitud.correo_electronico"></td>
                                                 <td x-text="(solicitud.entidad_procedencia && solicitud.entidad_procedencia.nombre) || solicitud.entidad_otra || 'N/A'"></td>
-                                                <td x-text="(solicitud.servicio && solicitud.servicio.nombre) || solicitud.servicio_otro || 'N/A'"></td>
+                                                <td>
+                                                    <span x-text="(solicitud.servicio && solicitud.servicio.nombre) || solicitud.servicio_otro || 'N/A'"></span>
+                                                    <span x-show="solicitud.servicio_otro" class="service-badge">Otro</span>
+                                                </td>
                                                 <td x-text="(solicitud.coordinacion && solicitud.coordinacion.nombre) || 'N/A'"></td>
                                                 <td>
                                                     <span class="status-badge" :class="'status-' + solicitud.estatus" x-text="formatStatus(solicitud.estatus)"></span>
                                                 </td>
                                                 <td x-text="formatDate(solicitud.fecha_solicitud)"></td>
                                                 <td style="text-align: center;">
+                                                    <button type="button" class="btn-warning" style="margin-right:8px"
+                                                        x-show="solicitud.servicio_otro && solicitud.servicio_otro.trim().length > 0"
+                                                        @click="openAssignModal(solicitud)">Asignar</button>
                                                     <button type="button" class="btn-primary" style="margin-right:8px"
                                                         x-show="(solicitud.estatus || '').toLowerCase() !== 'revisado'"
                                                         @click="openReviewedModal(solicitud)">Revisado</button>
@@ -516,20 +560,61 @@
                             </div>
                         </div>
 
-                        <!-- Scroll inferior -->
                         <div class="table-scroll-bottom" x-ref="bottomScroll">
                             <div class="table-scroll-inner" x-ref="bottomScrollInner"></div>
                         </div>
 
                         <br>
-                        <!-- Paginación accesible (sin recargar) -->
                         <nav class="controls-container" aria-label="Paginación">
                             <div style="display:flex;align-items:center;gap:12px;justify-content:flex-end;width:100%">
-                                <button type="button" class="btn-secondary" x-show="currentPage > 1" @click="goToPage(currentPage - 1)" aria-label="Página anterior">Anterior</button>
-                                <span class="counter-text" x-text="`Página ${currentPage} de ${lastPage}`"></span>
-                                <button type="button" class="btn-secondary" x-show="currentPage < lastPage" @click="goToPage(currentPage + 1)" aria-label="Página siguiente">Siguiente</button>
+                                @if($solicitudes->onFirstPage())
+                                    <span class="btn-secondary" aria-disabled="true" tabindex="-1">Anterior</span>
+                                @else
+                                    <a href="{{ $solicitudes->previousPageUrl() }}" class="btn-secondary" aria-label="Página anterior">Anterior</a>
+                                @endif
+
+                                <span class="counter-text">Página {{ $solicitudes->currentPage() }} de {{ $solicitudes->lastPage() }}</span>
+
+                                @if($solicitudes->hasMorePages())
+                                    <a href="{{ $solicitudes->nextPageUrl() }}" class="btn-secondary" aria-label="Página siguiente">Siguiente</a>
+                                @else
+                                    <span class="btn-secondary" aria-disabled="true" tabindex="-1">Siguiente</span>
+                                @endif
                             </div>
                         </nav>
+
+                        <!-- Modal Asignar Coordinación -->
+                        <div x-show="showAssignModal" x-cloak class="modal-overlay" @click.self="showAssignModal = false">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h3 class="text-lg font-semibold">Asignar Coordinación</h3>
+                                    <button @click="showAssignModal = false" class="btn-close" aria-label="Cerrar">
+                                        <svg style="width: 24px; height: 24px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                </div>
+                                <div class="modal-body">
+                                    <p class="text-gray-600 mb-4">
+                                        Asignar coordinación al servicio "<span x-text="assignData.servicioNombre" class="font-semibold"></span>"
+                                        de la solicitud #<span x-text="assignData.id" class="font-semibold"></span>
+                                    </p>
+                                    <div class="form-group">
+                                        <label class="form-label">Selecciona una coordinación:</label>
+                                        <select x-model="assignData.selectedCoordinacion" class="form-select">
+                                            <option value="">-- Selecciona --</option>
+                                            <template x-for="c in coordinaciones" :key="c.id">
+                                                <option :value="c.id" x-text="c.nombre"></option>
+                                            </template>
+                                        </select>
+                                    </div>
+                                    <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px;">
+                                        <button type="button" @click="showAssignModal = false" class="btn-secondary">Cancelar</button>
+                                        <button type="button" class="btn-warning" @click="confirmAssign()">Asignar</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
                         <!-- Modal Confirmar Revisado -->
                         <div x-show="showReviewedModal" x-cloak class="modal-overlay" @click.self="showReviewedModal = false">
@@ -560,7 +645,7 @@
                             <div class="modal-content">
                                 <div class="modal-header">
                                     <h3 class="text-lg font-semibold">Confirmar En Revisión</h3>
-                                    <button @click="showInReviewModal" class="btn-close" aria-label="Cerrar">
+                                    <button @click="showInReviewModal = false" class="btn-close" aria-label="Cerrar">
                                         <svg style="width: 24px; height: 24px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                                         </svg>
@@ -588,7 +673,6 @@
     <script>
         function solicitudesData() {
             return {
-                // Estado inicial (vacío, se llenará desde data attributes)
                 search: '',
                 showFilters: false,
                 statusFilter: '',
@@ -601,7 +685,6 @@
                 servicios: [],
                 otrosServicios: [],
                 totalRows: 0,
-                totalRowsAll: 0,
                 visibleRows: 0,
                 currentPage: 1,
                 lastPage: 1,
@@ -609,16 +692,12 @@
                 reviewedData: {},
                 showInReviewModal: false,
                 inReviewData: {},
-                apiUrl: '/solicitudes/data',
-                loading: false,
+                showAssignModal: false,
+                assignData: {},
 
-                /**
-                 * Inicializa todos los valores desde los data attributes del elemento
-                 */
                 initServerValues() {
                     const d = this.$el.dataset;
                     
-                    // Parsear valores JSON de forma segura
                     try {
                         this.statusFilter = JSON.parse(d.status ?? '"todos"');
                     } catch (e) {
@@ -655,118 +734,98 @@
                         this.otrosServicios = [];
                     }
 
-                    // Parsear valores numéricos
                     this.totalRows = Number(d.total ?? 0);
-                    this.totalRowsAll = Number(d.total ?? 0);
                     this.visibleRows = Number(d.visible ?? 0);
                     this.currentPage = Number(d.current ?? 1);
                     this.lastPage = Number(d.last ?? 1);
+                },
 
-                    // Cargar parámetros actuales del URL en los filtros para mantenerlos visibles
+                onStatusChange() {
                     const url = new URL(window.location.href);
-                    this.search = url.searchParams.get('q') || '';
-                    this.dateFilter = url.searchParams.get('fecha') || '';
-                    this.coordinacionFilter = url.searchParams.get('coordinacion_id') || '';
-                    // No abrir panel de filtros automáticamente
-                    // this.showFilters = false;
-                    // Obtener totales globales y datos iniciales del endpoint
-                    this.fetchSolicitudes(this.currentPage);
-                 },
+                    if (this.statusFilter && this.statusFilter !== 'todos') {
+                        url.searchParams.set('status', this.statusFilter);
+                    } else {
+                        url.searchParams.delete('status');
+                    }
+                    url.searchParams.delete('page');
+                    window.history.replaceState({}, '', url.toString());
+                },
 
-                /** Construye los parámetros de consulta según el estado actual */
-                buildParams(page = 1) {
-                    const params = new URLSearchParams();
-                    if (this.search) params.set('q', this.search.trim());
-                    if (this.dateFilter) params.set('fecha', this.dateFilter);
-                    if (this.coordinacionFilter) params.set('coordinacion_id', this.coordinacionFilter);
-                    if (this.statusFilter && this.statusFilter !== 'todos') params.set('status', this.statusFilter);
+                onServiceChange() {
+                    const url = new URL(window.location.href);
                     const val = String(this.servicioFilter || '').trim();
+                    
                     if (val) {
                         const isNumeric = /^[0-9]+$/.test(val);
                         if (isNumeric) {
-                            params.set('servicio_id', val);
+                            url.searchParams.set('servicio_id', val);
+                            url.searchParams.delete('servicio');
                         } else if (val === 'otros') {
-                            params.set('servicio', 'otros');
+                            url.searchParams.set('servicio', 'otros');
+                            url.searchParams.delete('servicio_id');
+                        } else {
+                            url.searchParams.delete('servicio');
+                            url.searchParams.delete('servicio_id');
                         }
+                    } else {
+                        url.searchParams.delete('servicio');
+                        url.searchParams.delete('servicio_id');
                     }
-                    if (page && page > 1) params.set('page', String(page));
-                    return params;
+                    url.searchParams.delete('page');
+                    window.history.replaceState({}, '', url.toString());
                 },
 
-                /** Actualiza la URL sin recargar la página */
-                updateUrlParams(params) {
-                    const url = new URL(window.location.href);
-                    url.search = params.toString();
-                    history.replaceState({}, '', url.toString());
+                openAssignModal(solicitud) {
+                    const servicioNombre = solicitud.servicio_otro || 'Sin nombre';
+                    this.assignData = {
+                        id: solicitud.id,
+                        servicioNombre: servicioNombre,
+                        selectedCoordinacion: solicitud.coordinacion_id || '',
+                        ref: solicitud
+                    };
+                    this.showAssignModal = true;
                 },
 
-                /** Obtiene solicitudes del servidor con filtros actuales */
-                async fetchSolicitudes(page = 1) {
+                async confirmAssign() {
+                    if (!this.assignData.selectedCoordinacion) {
+                        alert('Por favor selecciona una coordinación.');
+                        return;
+                    }
+
                     try {
-                        this.loading = true;
-                        const params = this.buildParams(page);
-                        this.updateUrlParams(params);
-                        const res = await fetch(`${this.apiUrl}?${params.toString()}`, {
-                            headers: { 'Accept': 'application/json' }
+                        const token = document.querySelector('meta[name=csrf-token]')?.getAttribute('content');
+                        const res = await fetch(`/solicitudes/${this.assignData.id}/asignar-coordinacion`, {
+                            method: 'PATCH',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': token,
+                                'Accept': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                coordinacion_id: this.assignData.selectedCoordinacion
+                            })
                         });
-                        if (!res.ok) throw new Error('Error al obtener datos');
-                        const json = await res.json();
-                        this.solicitudes = Array.isArray(json.data) ? json.data : [];
-                        const meta = json.meta || {};
-                        this.currentPage = meta.current_page || 1;
-                        this.lastPage = meta.last_page || 1;
-                        this.totalRows = meta.total || this.solicitudes.length;
-                        this.totalRowsAll = (meta.total_all !== undefined) ? meta.total_all : this.totalRowsAll;
-                        this.visibleRows = this.solicitudes.length;
+
+                        if (!res.ok) {
+                            const errorData = await res.json();
+                            throw new Error(errorData.error || 'Respuesta no válida');
+                        }
+
+                        const data = await res.json();
+                        
+                        // Actualizar el estado local
+                        this.assignData.ref.coordinacion_id = data.coordinacion_id;
+                        this.assignData.ref.coordinacion = data.coordinacion;
+                        this.assignData.ref.fecha_actualizacion = data.fecha_actualizacion;
+                        
+                        this.showAssignModal = false;
+                        alert('Coordinación asignada exitosamente.');
                     } catch (e) {
                         console.error(e);
-                        alert('Ocurrió un error al aplicar filtros.');
-                    } finally {
-                        this.loading = false;
+                        alert('Ocurrió un error al asignar la coordinación: ' + e.message);
                     }
                 },
 
-                /** Aplica filtros y recarga datos de la página 1 */
-                applyFilters() {
-                    this.fetchSolicitudes(1);
-                },
-
-                /** Navega a una página específica sin recargar */
-                goToPage(page) {
-                    if (!page || page < 1 || page > this.lastPage) return;
-                    this.fetchSolicitudes(page);
-                },
-
-                /** Maneja cambios en el filtro de estatus */
-                onStatusChange() {
-                    this.applyFilters();
-                },
-
-                /** Maneja cambios en el filtro de servicio */
-                onServiceChange() {
-                    this.applyFilters();
-                },
-
-                /** Maneja cambios en coordinación */
-                onCoordinacionChange() {
-                    this.applyFilters();
-                },
-
-                /** Maneja cambios en fecha */
-                onDateChange() {
-                    this.applyFilters();
-                },
-
-                /** Maneja búsqueda con debounce */
-                searchDebounceId: null,
-                onSearchInput() {
-                    clearTimeout(this.searchDebounceId);
-                    this.searchDebounceId = setTimeout(() => this.applyFilters(), 300);
-                },
-
-                /**
-                 * Abre el modal para marcar como revisado
-                 */
                 openReviewedModal(solicitud) {
                     const nombre = `${solicitud.nombres} ${solicitud.apellido_paterno} ${solicitud.apellido_materno || ''}`.trim();
                     this.reviewedData = {
@@ -777,9 +836,6 @@
                     this.showReviewedModal = true;
                 },
 
-                /**
-                 * Abre el modal para revertir a "En Revisión"
-                 */
                 openInReviewModal(solicitud) {
                     const nombre = `${solicitud.nombres} ${solicitud.apellido_paterno} ${solicitud.apellido_materno || ''}`.trim();
                     this.inReviewData = {
@@ -790,9 +846,6 @@
                     this.showInReviewModal = true;
                 },
 
-                /**
-                 * Confirma y marca la solicitud como revisada
-                 */
                 async confirmReviewed() {
                     try {
                         const token = document.querySelector('meta[name=csrf-token]')?.getAttribute('content');
@@ -812,7 +865,6 @@
 
                         const data = await res.json();
                         
-                        // Actualizar el estado local
                         this.reviewedData.ref.estatus = 'revisado';
                         this.reviewedData.ref.fecha_actualizacion = data.fecha_actualizacion || this.reviewedData.ref.fecha_actualizacion;
                         
@@ -823,9 +875,6 @@
                     }
                 },
 
-                /**
-                 * Confirma y revierte la solicitud a "En Revisión"
-                 */
                 async confirmInReview() {
                     try {
                         const token = document.querySelector('meta[name=csrf-token]')?.getAttribute('content');
@@ -845,7 +894,6 @@
 
                         const data = await res.json();
                         
-                        // Actualizar el estado local
                         this.inReviewData.ref.estatus = 'en_revision';
                         this.inReviewData.ref.fecha_actualizacion = data.fecha_actualizacion || this.inReviewData.ref.fecha_actualizacion;
                         
@@ -856,18 +904,68 @@
                     }
                 },
 
-                /**
-                 * Computed property: solicitudes filtradas
-                 */
                 get filteredSolicitudes() {
-                    // Los datos ya vienen filtrados y paginados desde el servidor
-                    this.visibleRows = this.solicitudes.length;
-                    return [...this.solicitudes].sort((a, b) => b.id - a.id);
+                    let items = [...this.solicitudes];
+
+                    if (this.statusFilter && this.statusFilter !== 'todos') {
+                        const sf = this.statusFilter.toLowerCase();
+                        items = items.filter(s => (s.estatus || '').toLowerCase() === sf);
+                    }
+
+                    if (this.dateFilter) {
+                        const start = new Date(this.dateFilter + 'T00:00:00');
+                        const end = new Date(this.dateFilter + 'T23:59:59');
+                        items = items.filter(s => {
+                            const d = s.fecha_solicitud ? new Date(s.fecha_solicitud) : null;
+                            return d && d >= start && d <= end;
+                        });
+                    }
+
+                    if (this.coordinacionFilter) {
+                        const cf = parseInt(this.coordinacionFilter, 10);
+                        items = items.filter(s => Number(s.coordinacion_id) === cf);
+                    }
+
+                    if (this.servicioFilter) {
+                        const val = String(this.servicioFilter).trim();
+                        const isNumeric = /^[0-9]+$/.test(val);
+                        
+                        if (isNumeric) {
+                            const sid = parseInt(val, 10);
+                            items = items.filter(s => Number(s.servicio_id) === sid);
+                        } else if (val === 'otros') {
+                            items = items.filter(s => {
+                                const otroTexto = String(s.servicio_otro || '').trim();
+                                const nombreServicio = String((s.servicio && s.servicio.nombre) || '').toLowerCase();
+                                return (otroTexto.length > 0) || (nombreServicio === 'otro');
+                            });
+                        }
+                    }
+
+                    if (!this.search) {
+                        this.visibleRows = items.length;
+                        return items.sort((a, b) => b.id - a.id);
+                    }
+
+                    const filtered = items.filter(solicitud => {
+                        const searchTerm = this.search.toLowerCase();
+                        const fullName = (solicitud.nombres + ' ' + solicitud.apellido_paterno + ' ' + (solicitud.apellido_materno || '')).toLowerCase();
+                        
+                        return fullName.includes(searchTerm) ||
+                               (solicitud.telefono && solicitud.telefono.toLowerCase().includes(searchTerm)) ||
+                               (solicitud.correo_electronico && solicitud.correo_electronico.toLowerCase().includes(searchTerm)) ||
+                               (solicitud.entidad_procedencia && solicitud.entidad_procedencia.nombre && solicitud.entidad_procedencia.nombre.toLowerCase().includes(searchTerm)) ||
+                               (solicitud.entidad_otra && solicitud.entidad_otra.toLowerCase().includes(searchTerm)) ||
+                               (solicitud.servicio && solicitud.servicio.nombre && solicitud.servicio.nombre.toLowerCase().includes(searchTerm)) ||
+                               (solicitud.servicio_otro && solicitud.servicio_otro.toLowerCase().includes(searchTerm)) ||
+                               (solicitud.coordinacion && solicitud.coordinacion.nombre && solicitud.coordinacion.nombre.toLowerCase().includes(searchTerm)) ||
+                               (solicitud.estatus && solicitud.estatus.toLowerCase().includes(searchTerm));
+                    });
+
+                    this.visibleRows = filtered.length;
+                    return filtered.sort((a, b) => b.id - a.id);
                 },
 
-                /**
-                 * Formatea una fecha para mostrarla
-                 */
                 formatDate(dateString) {
                     if (!dateString) return 'N/A';
                     
@@ -881,9 +979,6 @@
                     });
                 },
 
-                /**
-                 * Formatea el texto de un estatus
-                 */
                 formatStatus(s) {
                     const map = {
                         'todos': 'Todos',
@@ -894,9 +989,6 @@
                     return map[k] ?? (s || 'N/A');
                 },
 
-                /**
-                 * Inicializa la sincronización de scrolls
-                 */
                 initScrollSync() {
                     this.$nextTick(() => {
                         const top = this.$refs.topScroll;
@@ -960,28 +1052,17 @@
                     });
                 },
 
-                /**
-                 * Limpia todos los filtros
-                 */
                 clearFilters() {
-                    this.statusFilter = 'todos';
+                    this.statusFilter = '';
                     this.dateFilter = '';
                     this.coordinacionFilter = '';
                     this.servicioFilter = '';
                     this.search = '';
-                    // No abrir panel de filtros automáticamente
-                    this.showFilters = false;
-                    // Actualizar URL sin parámetros y cargar primera página sin recargar
-                    const params = new URLSearchParams();
-                    this.updateUrlParams(params);
-                    this.fetchSolicitudes(1);
+                    this.showFilters = true;
                 }
             };
         }
 
-        /**
-         * Inicializa la animación de carga de la tabla
-         */
         document.addEventListener('DOMContentLoaded', function() {
             const container = document.getElementById('tableContainer');
             if (container) {

@@ -2,13 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\Request;
 use App\Models\Coordinaciones;
+use App\Models\EntidadesProcedencia;
 use App\Models\Servicios;
 use App\Models\SolicitudesServicio;
-use App\Models\EntidadesProcedencia;
-use App\Models\User;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 
 class AdminController extends Controller
 {
@@ -200,62 +198,16 @@ class AdminController extends Controller
         $request->validate([
             'representante' => 'nullable|string|max:255',
             'correo_representante' => 'nullable|email|max:255',
-            'password' => 'nullable|string|min:8|confirmed',
         ]);
 
         try {
-            // Actualizar representante global en todas las coordinaciones
             Coordinaciones::query()->update([
                 'representante' => $request->representante,
                 'correo_representante' => $request->correo_representante,
             ]);
 
-            $newName = $request->representante;
-            $newEmail = $request->correo_representante;
-            $newPassword = $request->password;
-            $message = 'Representante actualizado exitosamente.';
-
-            if (!empty($newEmail)) {
-                // Demote cualquier admin previo que no sea el nuevo representante
-                User::where('role', 'admin')
-                    ->where('email', '!=', $newEmail)
-                    ->update(['role' => 'superadmin']);
-
-                // Promover/crear el usuario admin con el correo del representante
-                $repUser = User::where('email', $newEmail)->first();
-                if ($repUser) {
-                    if (!empty($newName)) {
-                        $repUser->name = $newName;
-                    }
-                    if (!empty($newPassword)) {
-                        $repUser->password = Hash::make($newPassword);
-                    }
-                    $repUser->role = 'admin';
-                    $repUser->save();
-                    $message = 'Representante actualizado y usuario asignado/actualizado con rol administrador.';
-                } else {
-                    if (empty($newPassword)) {
-                        return redirect()->route('coordinaciones')
-                            ->with('error', 'Para crear el usuario del representante, ingrese una contraseña.');
-                    }
-
-                    User::create([
-                        'name' => !empty($newName) ? $newName : 'Representante',
-                        'email' => $newEmail,
-                        'password' => Hash::make($newPassword),
-                        'role' => 'admin',
-                    ]);
-
-                    $message = 'Representante actualizado y usuario administrador creado.';
-                }
-            } else {
-                // Si se elimina el correo del representante, remover privilegios de admin
-                User::where('role', 'admin')->update(['role' => 'superadmin']);
-                $message = 'Representante eliminado. Se removieron privilegios de administrador.';
-            }
-
             return redirect()->route('coordinaciones')
-                ->with('success', $message);
+                ->with('success', 'Representante actualizado exitosamente.');
         } catch (\Exception $e) {
             return redirect()->route('coordinaciones')
                 ->with('error', 'Error al actualizar el representante: ' . $e->getMessage());
@@ -396,69 +348,30 @@ class AdminController extends Controller
     // ========== MÉTODOS PARA SOLICITUDES DE SERVICIOS ==========
     public function solicitudesServiciosIndex(Request $request)
     {
-        // Parámetros de filtro desde la URL
+        // Filtro de estatus por query param (sin default: mostrar todos)
         $status = $request->query('status');
+        // Filtro de servicio por query param
         $servicioId = $request->query('servicio_id');
-        $servicioFlag = $request->query('servicio'); // cuando es "otros"
-        $coordinacionId = $request->query('coordinacion_id');
-        $fecha = $request->query('fecha'); // YYYY-MM-DD
-        $q = $request->query('q');
+        // Filtro de servicio_otro por query param (texto libre)
+        $servicioOtro = $request->query('servicio_otro');
 
         $query = SolicitudesServicio::with(['entidadProcedencia', 'servicio', 'coordinacion'])
             ->orderBy('fecha_solicitud', 'desc');
 
-        // Filtro de estatus
+        // Si viene 'todos' en la URL, no aplicar filtro
         if (!empty($status) && $status !== 'todos') {
             $query->where('estatus', $status);
         }
 
-        // Filtro de servicio
+        // Filtrar por servicio si viene en la URL
         if (!empty($servicioId)) {
             $query->where('servicio_id', $servicioId);
-        } elseif (!empty($servicioFlag) && $servicioFlag === 'otros') {
-            // "Otros" = tiene servicio_otro o el servicio catalogado se llama "otro"
-            $query->where(function ($qq) {
-                $qq->whereNotNull('servicio_otro')
-                   ->where('servicio_otro', '!=', '');
-            })->orWhereHas('servicio', function ($s) {
-                $s->whereRaw('LOWER(nombre) = ?', ['otro']);
-            });
+        } elseif (!empty($servicioOtro)) {
+            $query->whereNotNull('servicio_otro')
+                  ->where('servicio_otro', $servicioOtro);
         }
 
-        // Filtro de coordinación
-        if (!empty($coordinacionId)) {
-            $query->where('coordinacion_id', $coordinacionId);
-        }
-
-        // Filtro por fecha exacta (día)
-        if (!empty($fecha)) {
-            $query->whereDate('fecha_solicitud', $fecha);
-        }
-
-        // Búsqueda global en varias columnas y relaciones
-        if (!empty($q)) {
-            $like = '%' . $q . '%';
-            $query->where(function ($w) use ($like) {
-                $w->where('nombres', 'like', $like)
-                  ->orWhere('apellido_paterno', 'like', $like)
-                  ->orWhere('apellido_materno', 'like', $like)
-                  ->orWhere('telefono', 'like', $like)
-                  ->orWhere('correo_electronico', 'like', $like)
-                  ->orWhere('servicio_otro', 'like', $like)
-                  ->orWhere('estatus', 'like', $like);
-            })
-            ->orWhereHas('entidadProcedencia', function ($q2) use ($like) {
-                $q2->where('nombre', 'like', $like);
-            })
-            ->orWhereHas('servicio', function ($q3) use ($like) {
-                $q3->where('nombre', 'like', $like);
-            })
-            ->orWhereHas('coordinacion', function ($q4) use ($like) {
-                $q4->where('nombre', 'like', $like);
-            });
-        }
-
-        // Paginación, preservando los parámetros
+        // Paginación de 15 por página, preservando parámetros
         $solicitudes = $query->paginate(15)->appends($request->query());
 
         // Listas para filtros en la vista
@@ -476,79 +389,6 @@ class AdminController extends Controller
             'servicios' => $servicios,
             'otrosServicios' => $otrosServicios,
             'status' => $status,
-        ]);
-    }
-
-    // Nuevo endpoint JSON para filtrar/paginar en tiempo real
-    public function solicitudesServiciosData(Request $request)
-    {
-        $status = $request->query('status');
-        $servicioId = $request->query('servicio_id');
-        $servicioFlag = $request->query('servicio');
-        $coordinacionId = $request->query('coordinacion_id');
-        $fecha = $request->query('fecha');
-        $q = $request->query('q');
-        $perPage = (int) ($request->query('per_page', 15));
-
-        $query = SolicitudesServicio::with(['entidadProcedencia', 'servicio', 'coordinacion'])
-            ->orderBy('fecha_solicitud', 'desc');
-
-        if (!empty($status) && $status !== 'todos') {
-            $query->where('estatus', $status);
-        }
-        if (!empty($servicioId)) {
-            $query->where('servicio_id', $servicioId);
-        } elseif (!empty($servicioFlag) && $servicioFlag === 'otros') {
-            $query->where(function ($qq) {
-                $qq->whereNotNull('servicio_otro')
-                   ->where('servicio_otro', '!=', '');
-            })->orWhereHas('servicio', function ($s) {
-                $s->whereRaw('LOWER(nombre) = ?', ['otro']);
-            });
-        }
-        if (!empty($coordinacionId)) {
-            $query->where('coordinacion_id', $coordinacionId);
-        }
-        if (!empty($fecha)) {
-            $query->whereDate('fecha_solicitud', $fecha);
-        }
-        if (!empty($q)) {
-            $like = '%' . $q . '%';
-            $query->where(function ($w) use ($like) {
-                $w->where('nombres', 'like', $like)
-                  ->orWhere('apellido_paterno', 'like', $like)
-                  ->orWhere('apellido_materno', 'like', $like)
-                  ->orWhere('telefono', 'like', $like)
-                  ->orWhere('correo_electronico', 'like', $like)
-                  ->orWhere('servicio_otro', 'like', $like)
-                  ->orWhere('estatus', 'like', $like);
-            })
-            ->orWhereHas('entidadProcedencia', function ($q2) use ($like) {
-                $q2->where('nombre', 'like', $like);
-            })
-            ->orWhereHas('servicio', function ($q3) use ($like) {
-                $q3->where('nombre', 'like', $like);
-            })
-            ->orWhereHas('coordinacion', function ($q4) use ($like) {
-                $q4->where('nombre', 'like', $like);
-            });
-        }
-
-        $page = (int) $request->query('page', 1);
-        $paginator = $query->paginate($perPage, ['*'], 'page', $page);
-
-        // Calcular total global sin filtros (para mostrar "X de Y")
-        $totalAll = \App\Models\SolicitudesServicio::count();
-
-        return response()->json([
-            'data' => $paginator->items(),
-            'meta' => [
-                'current_page' => $paginator->currentPage(),
-                'last_page' => $paginator->lastPage(),
-                'per_page' => $paginator->perPage(),
-                'total' => $paginator->total(),
-                'total_all' => $totalAll,
-            ],
         ]);
     }
 
@@ -606,6 +446,48 @@ class AdminController extends Controller
             ]);
         } catch (\Exception $e) {
             return response()->json(['error' => 'Error al revertir a en revisión: ' . $e->getMessage()], 422);
+        }
+    }
+
+    /**
+     * Asigna una coordinación a una solicitud con servicio "Otro".
+     */
+    public function solicitudesServiciosAsignarCoordinacion(Request $request, $id)
+    {
+        $request->validate([
+            'coordinacion_id' => 'required|exists:coordinaciones,id',
+        ]);
+
+        try {
+            $solicitud = SolicitudesServicio::findOrFail($id);
+            
+            // Verificar que sea un servicio "Otro"
+            if (empty($solicitud->servicio_otro)) {
+                return response()->json([
+                    'error' => 'Solo se puede asignar coordinación a servicios "Otro".'
+                ], 422);
+            }
+
+            $solicitud->coordinacion_id = $request->coordinacion_id;
+            $solicitud->fecha_actualizacion = now();
+            $solicitud->save();
+
+            // Recargar la relación para obtener los datos actualizados
+            $solicitud->load('coordinacion');
+
+            return response()->json([
+                'id' => $solicitud->id,
+                'coordinacion_id' => $solicitud->coordinacion_id,
+                'coordinacion' => $solicitud->coordinacion ? [
+                    'id' => $solicitud->coordinacion->id,
+                    'nombre' => $solicitud->coordinacion->nombre,
+                ] : null,
+                'fecha_actualizacion' => optional($solicitud->fecha_actualizacion)->toIso8601String(),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Error al asignar coordinación: ' . $e->getMessage()
+            ], 422);
         }
     }
 }
