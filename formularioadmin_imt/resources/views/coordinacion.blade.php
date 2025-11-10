@@ -384,6 +384,7 @@
                             showEditModal: false,
                             showDeleteModal: false,
                             showRepresentanteModal: false,
+                            showPasswordModal: false,
                             editData: {},
                             deleteData: {},
                             createData: { nombre: '', coordinador: '', correo_coordinador: '', asistente: '', correo_asistente: '' },
@@ -625,25 +626,25 @@
                                 <form x-ref="createForm" method="POST" action="{{ route('coordinaciones.store') }}" class="modal-body" @submit.prevent="validateAndSubmitCreate()">
                                     @csrf
                                     <div class="form-group">
-                                        <label class="form-label">Nombre *</label>
+                                        <label class="form-label">Nombre de la coordinación *</label>
                                         <input type="text" name="nombre" class="form-input" x-model="createData.nombre" required />
                                         <p class="text-red-600 text-sm" x-show="createErrors.nombre" x-text="createErrors.nombre"></p>
                                     </div>
                                     <div class="form-group">
-                                        <label class="form-label">Coordinador</label>
+                                        <label class="form-label">Nombre del coordinador</label>
                                         <input type="text" name="coordinador" class="form-input" x-model="createData.coordinador" />
                                     </div>
                                     <div class="form-group">
-                                        <label class="form-label">Correo Coordinador</label>
+                                        <label class="form-label">Correo del coordinador</label>
                                         <input type="email" name="correo_coordinador" class="form-input" x-model="createData.correo_coordinador" />
                                         <p class="text-red-600 text-sm" x-show="createErrors.correo_coordinador" x-text="createErrors.correo_coordinador"></p>
                                     </div>
                                     <div class="form-group">
-                                        <label class="form-label">Asistente</label>
+                                        <label class="form-label">Nombre del asistente</label>
                                         <input type="text" name="asistente" class="form-input" x-model="createData.asistente" />
                                     </div>
                                     <div class="form-group">
-                                        <label class="form-label">Correo Asistente</label>
+                                        <label class="form-label">Correo del asistente</label>
                                         <input type="email" name="correo_asistente" class="form-input" x-model="createData.correo_asistente" />
                                         <p class="text-red-600 text-sm" x-show="createErrors.correo_asistente" x-text="createErrors.correo_asistente"></p>
                                     </div>
@@ -673,23 +674,23 @@
                                     @csrf
                                     @method('PUT')
                                     <div class="form-group">
-                                        <label class="form-label">Nombre *</label>
+                                        <label class="form-label">Nombre de la coordinación *</label>
                                         <input type="text" name="nombre" x-model="editData.nombre" class="form-input" required />
                                     </div>
                                     <div class="form-group">
-                                        <label class="form-label">Coordinador</label>
+                                        <label class="form-label">Nombre del coordinador</label>
                                         <input type="text" name="coordinador" x-model="editData.coordinador" class="form-input" />
                                     </div>
                                     <div class="form-group">
-                                        <label class="form-label">Correo Coordinador</label>
+                                        <label class="form-label">Correo del coordinador</label>
                                         <input type="email" name="correo_coordinador" x-model="editData.correo_coordinador" class="form-input" />
                                     </div>
                                     <div class="form-group">
-                                        <label class="form-label">Asistente</label>
+                                        <label class="form-label">Nombre del asistente</label>
                                         <input type="text" name="asistente" x-model="editData.asistente" class="form-input" />
                                     </div>
                                     <div class="form-group">
-                                        <label class="form-label">Correo Asistente</label>
+                                        <label class="form-label">Correo del asistente</label>
                                         <input type="email" name="correo_asistente" x-model="editData.correo_asistente" class="form-input" />
                                     </div>
                                     
@@ -752,20 +753,44 @@
                                     <div class="form-group">
                                         <label class="form-label">Correo del Representante</label>
                                         <input type="email" name="correo_representante" class="form-input" x-model="repData.correo_representante" />
-                                    </div>
-                                    <!-- Nueva sección: contraseña para crear/actualizar usuario admin -->
-                                    <div class="form-group">
-                                        <label class="form-label">Contraseña del Admin</label>
-                                        <input type="password" name="password" class="form-input" placeholder="Mínimo 8 caracteres" />
-                                        <p class="text-xs text-gray-500 mt-1">Si el usuario no existe, esta contraseña se usará para crearlo. Si ya existe y desea actualizarla, ingrésela aquí.</p>
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="form-label">Confirmar Contraseña</label>
-                                        <input type="password" name="password_confirmation" class="form-input" />
+                                        <button type="button" @click="showPasswordModal = true" style="margin-top: 8px; background: none; border: none; color: #2563eb; text-decoration: underline; cursor: pointer; padding: 0;">¿Olvidaste tu contraseña?</button>
                                     </div>
                                     <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;">
                                         <button type="button" @click="showRepresentanteModal = false" class="btn-secondary">Cancelar</button>
                                         <button type="submit" class="btn-primary">Confirmar</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- Modal Cambiar Contraseña del Representante -->
+                        <div x-show="showPasswordModal" x-cloak class="modal-overlay" @click.self="showPasswordModal = false">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h3 class="text-lg font-semibold">Cambiar Contraseña del Representante</h3>
+                                    <button @click="showPasswordModal = false" class="btn-close" aria-label="Cerrar">
+                                        <svg style="width: 24px; height: 24px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                </div>
+                                <form method="POST" action="{{ route('coordinaciones.representante.update_password') }}" class="modal-body">
+                                    @csrf
+                                    <div class="form-group">
+                                        <label class="form-label">Correo del Representante</label>
+                                        <input type="email" name="correo_representante" class="form-input" x-model="repData.correo_representante" />
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Nueva Contraseña</label>
+                                        <input type="password" name="password" class="form-input" placeholder="Mínimo 8 caracteres" required />
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Confirmar Nueva Contraseña</label>
+                                        <input type="password" name="password_confirmation" class="form-input" required />
+                                    </div>
+                                    <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;">
+                                        <button type="button" @click="showPasswordModal = false" class="btn-secondary">Cancelar</button>
+                                        <button type="submit" class="btn-primary">Actualizar Contraseña</button>
                                     </div>
                                 </form>
                             </div>

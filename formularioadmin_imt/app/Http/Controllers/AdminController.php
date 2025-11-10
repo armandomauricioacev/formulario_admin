@@ -3,6 +3,9 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use App\Models\User;
 use App\Models\Coordinaciones;
 use App\Models\EntidadesProcedencia;
 use App\Models\Servicios;
@@ -97,8 +100,16 @@ class AdminController extends Controller
             ->orderByDesc('id')
             ->first();
 
-        $globalRepresentante = $global->representante ?? '';
-        $globalCorreoRepresentante = $global->correo_representante ?? '';
+        // Prefill solo si el correo corresponde a un usuario con rol admin
+        $globalRepresentante = '';
+        $globalCorreoRepresentante = '';
+        if ($global && !empty($global->correo_representante)) {
+            $u = User::where('email', $global->correo_representante)->first();
+            if ($u && $u->role === 'admin') {
+                $globalRepresentante = $global->representante ?? ($u->name ?? '');
+                $globalCorreoRepresentante = $global->correo_representante ?? ($u->email ?? '');
+            }
+        }
 
         return view('coordinacion', compact('coordinaciones', 'globalRepresentante', 'globalCorreoRepresentante'));
     }
@@ -201,16 +212,85 @@ class AdminController extends Controller
         ]);
 
         try {
-            Coordinaciones::query()->update([
-                'representante' => $request->representante,
-                'correo_representante' => $request->correo_representante,
-            ]);
+            DB::transaction(function () use ($request) {
+                $nombre = $request->input('representante');
+                $email = $request->input('correo_representante');
+
+                // 1) Actualizar usuario representante basado en el correo global previo
+                $prevGlobal = Coordinaciones::select('correo_representante')
+                    ->whereNotNull('correo_representante')
+                    ->orderByDesc('id')
+                    ->first();
+                $prevEmail = $prevGlobal->correo_representante ?? null;
+                $prevUser = $prevEmail ? User::where('email', $prevEmail)->where('role', 'admin')->first() : null;
+
+                if ($prevUser) {
+                    if ($nombre) {
+                        $prevUser->name = $nombre;
+                    }
+                    if ($email && $email !== $prevUser->email) {
+                        $emailTaken = User::where('email', $email)->where('id', '!=', $prevUser->id)->exists();
+                        if ($emailTaken) {
+                            throw new \RuntimeException('El correo ya está en uso por otro usuario.');
+                        }
+                        $prevUser->email = $email;
+                    }
+                    $prevUser->save();
+                } else if ($email) {
+                    // Si no existe usuario previo, pero el correo proporcionado corresponde a un usuario con rol admin, actualizar su nombre
+                    $user = User::where('email', $email)->first();
+                    if ($user && $user->role !== 'admin') {
+                        throw new \RuntimeException('El correo pertenece a un usuario con rol distinto de admin.');
+                    }
+                    if ($user && $nombre) {
+                        $user->name = $nombre;
+                        $user->save();
+                    }
+                }
+
+                // 2) Actualiza los campos globales en todas las coordinaciones (solo los enviados)
+                $updates = [];
+                if (!is_null($nombre)) {
+                    $updates['representante'] = $nombre;
+                }
+                if (!is_null($email)) {
+                    $updates['correo_representante'] = $email;
+                }
+                if (!empty($updates)) {
+                    Coordinaciones::query()->update($updates);
+                }
+            });
 
             return redirect()->route('coordinaciones')
                 ->with('success', 'Representante actualizado exitosamente.');
         } catch (\Exception $e) {
             return redirect()->route('coordinaciones')
                 ->with('error', 'Error al actualizar el representante: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Actualiza la contraseña del usuario representante
+     */
+    public function coordinacionesRepresentativeUpdatePassword(Request $request)
+    {
+        $request->validate([
+            'correo_representante' => 'required|email|exists:users,email',
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        try {
+            $user = User::where('email', $request->correo_representante)
+                        ->where('role', 'admin')
+                        ->firstOrFail();
+            $user->password = Hash::make($request->password);
+            $user->save();
+
+            return redirect()->route('coordinaciones')
+                ->with('success', 'Contraseña actualizada exitosamente.');
+        } catch (\Exception $e) {
+            return redirect()->route('coordinaciones')
+                ->with('error', 'Error al actualizar la contraseña: ' . $e->getMessage());
         }
     }
 
@@ -347,50 +427,106 @@ class AdminController extends Controller
 
     // ========== MÉTODOS PARA SOLICITUDES DE SERVICIOS ==========
     public function solicitudesServiciosIndex(Request $request)
-    {
-        // Filtro de estatus por query param (sin default: mostrar todos)
-        $status = $request->query('status');
-        // Filtro de servicio por query param
-        $servicioId = $request->query('servicio_id');
-        // Filtro de servicio_otro por query param (texto libre)
-        $servicioOtro = $request->query('servicio_otro');
+{
+    // Filtros por query params
+    $status = $request->query('status');
+    $servicioId = $request->query('servicio_id');
+    $servicio = $request->query('servicio');
+    $coordinacionId = $request->query('coordinacion_id');
+    $fechaFilter = $request->query('fecha');
+    $search = trim($request->query('search', ''));
 
-        $query = SolicitudesServicio::with(['entidadProcedencia', 'servicio', 'coordinacion'])
-            ->orderBy('fecha_solicitud', 'desc');
+    $query = SolicitudesServicio::with(['entidadProcedencia', 'servicio', 'coordinacion'])
+        ->orderBy('id', 'desc'); // Ordenar por ID descendente
 
-        // Si viene 'todos' en la URL, no aplicar filtro
-        if (!empty($status) && $status !== 'todos') {
-            $query->where('estatus', $status);
-        }
+    // Filtro de estatus
+    if (!empty($status) && $status !== 'todos') {
+        $query->where('estatus', $status);
+    }
 
-        // Filtrar por servicio si viene en la URL
-        if (!empty($servicioId)) {
-            $query->where('servicio_id', $servicioId);
-        } elseif (!empty($servicioOtro)) {
-            $query->whereNotNull('servicio_otro')
-                  ->where('servicio_otro', $servicioOtro);
-        }
+    // Filtro de servicio por ID
+    if (!empty($servicioId) && is_numeric($servicioId)) {
+        $query->where('servicio_id', $servicioId);
+    }
+    // Filtro de servicio "otros"
+    elseif (!empty($servicio) && $servicio === 'otros') {
+        $query->where(function($q) {
+            $q->whereNotNull('servicio_otro')
+              ->where('servicio_otro', '!=', '');
+        });
+    }
 
-        // Paginación de 15 por página, preservando parámetros
-        $solicitudes = $query->paginate(15)->appends($request->query());
+    // Filtro de coordinación
+    if (!empty($coordinacionId) && is_numeric($coordinacionId)) {
+        $query->where('coordinacion_id', $coordinacionId);
+    }
 
-        // Listas para filtros en la vista
-        $coordinaciones = Coordinaciones::orderBy('nombre')->get();
-        $servicios = Servicios::orderBy('nombre')->get();
-        $otrosServicios = SolicitudesServicio::whereNotNull('servicio_otro')
-            ->where('servicio_otro', '!=', '')
-            ->distinct()
-            ->orderBy('servicio_otro')
-            ->pluck('servicio_otro');
+    // Filtro de fecha
+    if (!empty($fechaFilter)) {
+        $query->whereDate('fecha_solicitud', $fechaFilter);
+    }
 
-        return view('solicitudes_servicios', [
-            'solicitudes' => $solicitudes,
-            'coordinaciones' => $coordinaciones,
-            'servicios' => $servicios,
-            'otrosServicios' => $otrosServicios,
-            'status' => $status,
+    // Búsqueda global en TODA la base de datos - CORREGIDO
+    if (!empty($search)) {
+        $query->where(function ($q) use ($search) {
+            $like = '%' . $search . '%';
+            $q->where('nombres', 'like', $like)
+              ->orWhere('apellido_paterno', 'like', $like)
+              ->orWhere('apellido_materno', 'like', $like)
+              ->orWhere('telefono', 'like', $like)
+              ->orWhere('correo_electronico', 'like', $like)
+              ->orWhere('entidad_otra', 'like', $like)
+              ->orWhere('servicio_otro', 'like', $like)
+              ->orWhere('estatus', 'like', $like)
+              ->orWhereHas('entidadProcedencia', function ($qq) use ($like) {
+                  $qq->where('nombre', 'like', $like);
+              })
+              ->orWhereHas('servicio', function ($qq) use ($like) {
+                  $qq->where('nombre', 'like', $like);
+              })
+              ->orWhereHas('coordinacion', function ($qq) use ($like) {
+                  $qq->where('nombre', 'like', $like);
+              });
+        });
+    }
+
+    // Paginación de 15 por página, preservando parámetros
+    $solicitudes = $query->paginate(15)->appends($request->query());
+
+    // Total global (sin filtros) para el contador en la vista
+    $totalAll = SolicitudesServicio::count();
+
+    // Listas para filtros en la vista
+    $coordinaciones = Coordinaciones::orderBy('nombre')->get();
+    $servicios = Servicios::orderBy('nombre')->get();
+    $otrosServicios = SolicitudesServicio::whereNotNull('servicio_otro')
+        ->where('servicio_otro', '!=', '')
+        ->distinct()
+        ->orderBy('servicio_otro')
+        ->pluck('servicio_otro');
+
+    // Respuesta JSON para actualizaciones dinámicas sin recargar la página
+    if ($request->expectsJson()) {
+        return response()->json([
+            'items' => $solicitudes->items(),
+            'totalFiltered' => $solicitudes->total(),
+            'currentPage' => $solicitudes->currentPage(),
+            'lastPage' => $solicitudes->lastPage(),
+            'visibleCount' => count($solicitudes->items()),
+            'totalAll' => $totalAll,
         ]);
     }
+
+    return view('solicitudes_servicios', [
+        'solicitudes' => $solicitudes,
+        'coordinaciones' => $coordinaciones,
+        'servicios' => $servicios,
+        'otrosServicios' => $otrosServicios,
+        'status' => $status,
+        'search' => $search,
+        'totalAll' => $totalAll,
+    ]);
+}
 
     public function solicitudesServiciosDestroy($id)
     {
@@ -414,6 +550,7 @@ class AdminController extends Controller
         try {
             $solicitud = SolicitudesServicio::findOrFail($id);
             $solicitud->estatus = SolicitudesServicio::ESTATUS_REVISADO;
+            $solicitud->fecha_atendida = now();
             $solicitud->fecha_actualizacion = now();
             $solicitud->save();
 
@@ -422,6 +559,7 @@ class AdminController extends Controller
                 'id' => $solicitud->id,
                 'estatus' => $solicitud->estatus,
                 'fecha_actualizacion' => optional($solicitud->fecha_actualizacion)->toIso8601String(),
+                'fecha_atendida' => optional($solicitud->fecha_atendida)->toIso8601String(),
             ]);
         } catch (\Exception $e) {
             return response()->json(['error' => 'Error al marcar como revisado: ' . $e->getMessage()], 422);
@@ -436,6 +574,7 @@ class AdminController extends Controller
         try {
             $solicitud = SolicitudesServicio::findOrFail($id);
             $solicitud->estatus = SolicitudesServicio::ESTATUS_EN_REVISION;
+            $solicitud->fecha_atendida = null;
             $solicitud->fecha_actualizacion = now();
             $solicitud->save();
 
@@ -443,6 +582,7 @@ class AdminController extends Controller
                 'id' => $solicitud->id,
                 'estatus' => $solicitud->estatus,
                 'fecha_actualizacion' => optional($solicitud->fecha_actualizacion)->toIso8601String(),
+                'fecha_atendida' => null,
             ]);
         } catch (\Exception $e) {
             return response()->json(['error' => 'Error al revertir a en revisión: ' . $e->getMessage()], 422);

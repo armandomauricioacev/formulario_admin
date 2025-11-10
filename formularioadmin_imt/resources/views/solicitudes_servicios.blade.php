@@ -401,27 +401,34 @@
                             box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
                         }
 
-                        .toast-success { background: #16a34a; }
-                        .toast-error { background: #dc2626; }
-
-                        .alert {
-                            padding: 12px 16px;
+                        .btn-search {
+                            background: #3b82f6;
+                            color: #ffffff;
+                            padding: 8px 16px;
                             border-radius: 6px;
-                            margin-bottom: 20px;
+                            border: none;
+                            cursor: pointer;
                             font-size: 14px;
+                            font-weight: 500;
+                            transition: background 0.2s ease;
+                            display: inline-flex;
+                            align-items: center;
+                            gap: 6px;
                         }
+                        .btn-search:hover { background: #2563eb; }
 
-                        .alert-success {
-                            background: #d1fae5;
-                            color: #065f46;
-                            border: 1px solid #a7f3d0;
+                        .btn-clear-search {
+                            background: #ef4444;
+                            color: #ffffff;
+                            padding: 8px 12px;
+                            border-radius: 6px;
+                            border: none;
+                            cursor: pointer;
+                            font-size: 14px;
+                            font-weight: 500;
+                            transition: background 0.2s ease;
                         }
-
-                        .alert-error {
-                            background: #fee2e2;
-                            color: #991b1b;
-                            border: 1px solid #fca5a5;
-                        }
+                        .btn-clear-search:hover { background: #dc2626; }
                     </style>
 
                     <div x-data="solicitudesData()" x-init="initServerValues(); initScrollSync()"
@@ -435,29 +442,23 @@
                          data-visible="{{ isset($solicitudes) ? count($solicitudes->items()) : 0 }}"
                          data-current="{{ isset($solicitudes) ? $solicitudes->currentPage() : 1 }}"
                          data-last="{{ isset($solicitudes) ? $solicitudes->lastPage() : 1 }}"
-                         class="container">
-                         
-                         <!-- Notificación interna (banner unificado con .alert) -->
-                         <div x-show="toast.show" x-transition.opacity.duration.150ms class="alert" :class="toast.type === 'success' ? 'alert-success' : 'alert-error'">
-                             <span x-text="toast.message"></span>
-                         </div>
-
-
+                         data-search-param="{{ $search ?? '' }}"
+                         data-total-all="{{ $totalAll ?? 0 }}">
 
                         @if(session('success'))
-                            <div class="alert alert-success">
+                            <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
                                 {{ session('success') }}
                             </div>
                         @endif
 
                         @if(session('error'))
-                            <div class="alert alert-error">
+                            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
                                 {{ session('error') }}
                             </div>
                         @endif
 
                         @if($errors->any())
-                            <div class="alert alert-error">
+                            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
                                 <ul class="list-disc list-inside">
                                     @foreach($errors->all() as $error)
                                         <li>{{ $error }}</li>
@@ -467,19 +468,26 @@
                         @endif
 
                         <div class="controls-container">
-                            <div class="search-container">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="search-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                </svg>
-                                <input 
-                                    type="text" 
-                                    x-model="search" 
-                                    placeholder="Buscar solicitudes..." 
-                                    class="search-input"
-                                />
+                            <div style="display: flex; gap: 12px; align-items: center; flex: 1;">
+                                <div class="search-container">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="search-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    </svg>
+                                    <input 
+                                        type="text" 
+                                        x-model="searchInput"
+                                        @input.debounce.400ms="onSearchChange"
+                                        placeholder="Buscar solicitudes..." 
+                                        class="search-input"
+                                    />
+                                </div>
+                                <button type="button" @click="clearSearch()" x-show="searchInput" class="btn-clear-search">
+                                    Limpiar
+                                </button>
                             </div>
+
                             <div class="counter-text">
-                                <span x-text="`Mostrando ${visibleRows} de ${totalRows}`"></span>
+                                <span x-text="`Mostrando ${filteredCount} de ${totalAll}`"></span>
                             </div>
                             <div>
                                 <button type="button" class="btn-filter" @click="showFilters = !showFilters">
@@ -488,43 +496,44 @@
                             </div>
                         </div>
 
-                        <div class="filters-panel" x-show="showFilters" x-cloak>
-                            <div class="filter-group">
-                                <label class="filter-label">Estatus</label>
-                                <select class="filter-input" x-model="statusFilter" @change="onStatusChange">
-                                    <template x-for="estatus in availableStatuses" :key="estatus">
-                                        <option :value="estatus" x-text="formatStatus(estatus)"></option>
-                                    </template>
-                                </select>
-                            </div>
-                            <div class="filter-group">
-                                <label class="filter-label">Fecha de solicitud</label>
-                                <input type="date" class="filter-input" x-model="dateFilter" />
-                            </div>
-                            <div class="filter-group">
-                                <label class="filter-label">Coordinación</label>
-                                <select class="filter-input" x-model="coordinacionFilter">
-                                    <option value="">Todas</option>
-                                    <template x-for="c in coordinaciones" :key="c.id">
-                                        <option :value="c.id" x-text="c.nombre"></option>
-                                    </template>
-                                </select>
-                            </div>
-                            <div class="filter-group">
-                                <label class="filter-label">Servicios</label>
-                                <select class="filter-input" x-model="servicioFilter" @change="onServiceChange">
-                                    <option value="">Todos</option>
-                                    <template x-for="s in servicios" :key="s.id">
-                                        <option :value="s.id" x-text="s.nombre"></option>
-                                    </template>
-                                    <option value="otros">Otros</option>
-                                </select>
-                            </div>
-                            <div class="filter-group" style="align-self: end;">
-                                <label class="filter-label">&nbsp;</label>
-                                <button type="button" class="btn-secondary" @click="clearFilters()">
-                                    Limpiar filtros
-                                </button>
+                        <div x-show="showFilters" x-cloak>
+                            <div class="filters-panel">
+                                <div class="filter-group">
+                                    <label class="filter-label">Estatus</label>
+                                    <select class="filter-input" x-model="statusFilter" @change="onFiltersChange">
+                                        <template x-for="estatus in availableStatuses" :key="estatus">
+                                            <option :value="estatus" x-text="formatStatus(estatus)"></option>
+                                        </template>
+                                    </select>
+                                </div>
+                                <div class="filter-group">
+                                    <label class="filter-label">Fecha de solicitud</label>
+                                    <input type="date" class="filter-input" x-model="dateFilter" @change="onFiltersChange" />
+                                </div>
+                                <div class="filter-group">
+                                    <label class="filter-label">Coordinación</label>
+                                    <select class="filter-input" x-model="coordinacionFilter" @change="onFiltersChange">
+                                        <option value="">Todas</option>
+                                        <template x-for="c in coordinaciones" :key="c.id">
+                                            <option :value="c.id" x-text="c.nombre"></option>
+                                        </template>
+                                    </select>
+                                </div>
+                                <div class="filter-group">
+                                    <label class="filter-label">Servicios</label>
+                                    <select class="filter-input" x-model="servicioFilter" @change="onFiltersChange">
+                                        <option value="">Todos</option>
+                                        <template x-for="s in servicios" :key="s.id">
+                                            <option :value="s.id" x-text="s.nombre"></option>
+                                        </template>
+                                        <option value="otros">Otros</option>
+                                    </select>
+                                </div>
+                                <div class="filter-group" style="align-self: end; display: flex; gap: 8px;">
+                                    <button type="button" class="btn-secondary" @click="clearFilters()">
+                                        Limpiar
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
@@ -546,11 +555,12 @@
                                             <th>Coordinación</th>
                                             <th>Estatus</th>
                                             <th>Fecha de Solicitud</th>
+                                            <th>Fecha atendida</th>
                                             <th style="text-align: center;">Acciones</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <template x-for="solicitud in filteredSolicitudes" :key="solicitud.id">
+                                        <template x-for="solicitud in solicitudes" :key="solicitud.id">
                                             <tr>
                                                 <td x-text="solicitud.id"></td>
                                                 <td x-text="solicitud.nombres + ' ' + solicitud.apellido_paterno + ' ' + (solicitud.apellido_materno || '')"></td>
@@ -563,26 +573,41 @@
                                                 </td>
                                                 <td x-text="(solicitud.coordinacion && solicitud.coordinacion.nombre) || 'N/A'"></td>
                                                 <td>
-                                                    <span class="status-badge" :class="'status-' + solicitud.estatus" x-text="formatStatus(solicitud.estatus)"></span>
+                                                    <span class="status-badge" :class="displayStatusClass(solicitud)" x-text="displayStatusLabel(solicitud)"></span>
                                                 </td>
                                                 <td x-text="formatDate(solicitud.fecha_solicitud)"></td>
+                                                <td x-text="formatDate(solicitud.fecha_atendida)"></td>
                                                 <td style="text-align: center;">
+                                                    <!-- Asignar solo para "Otro" sin coordinación -->
                                                     <button type="button" class="btn-warning" style="margin-right:8px"
-                                                        x-show="solicitud.servicio_otro && solicitud.servicio_otro.trim().length > 0"
+                                                        x-show="solicitud.servicio_otro && solicitud.servicio_otro.trim().length > 0 && !solicitud.coordinacion_id"
                                                         @click="openAssignModal(solicitud)">Asignar</button>
+
+                                                    <!-- Marcar como Atendido mientras no esté revisado -->
                                                     <button type="button" class="btn-primary" style="margin-right:8px"
                                                         x-show="(solicitud.estatus || '').toLowerCase() !== 'revisado'"
-                                                        @click="openReviewedModal(solicitud)">Revisado</button>
+                                                        @click="openReviewedModal(solicitud)">Atendido</button>
+
+                                                    <!-- Revertir a Por Atender solo para "Otro" sin coordinación y que esté revisado -->
                                                     <button type="button" class="btn-primary" style="margin-right:8px"
-                                                        x-show="(solicitud.estatus || '').toLowerCase() === 'revisado'"
-                                                        @click="openInReviewModal(solicitud)">En Revisión</button>
+                                                        x-show="(solicitud.estatus || '').toLowerCase() === 'revisado' && (solicitud.servicio_otro && solicitud.servicio_otro.trim().length > 0 && !solicitud.coordinacion_id)"
+                                                        @click="openInReviewModal(solicitud)">Por Atender</button>
+
+                                                    <!-- Texto Completado cuando no hay más acciones: 
+                                                         - Servicio existente (no "Otro") con estatus revisado
+                                                         - Servicio "Otro" con coordinación asignada y estatus revisado -->
+                                                    <span style="font-weight:600;color:#374151;"
+                                                        x-show="( ( !(solicitud.servicio_otro && solicitud.servicio_otro.trim().length > 0) ) && (solicitud.estatus || '').toLowerCase() === 'revisado' )
+                                                              || ( (solicitud.servicio_otro && solicitud.servicio_otro.trim().length > 0 && solicitud.coordinacion_id) && (solicitud.estatus || '').toLowerCase() === 'revisado' )">
+                                                        Completado
+                                                    </span>
                                                 </td>
                                             </tr>
                                         </template>
-                                        <tr x-show="filteredSolicitudes.length === 0">
+                                        <tr x-show="solicitudes.length === 0">
                                             <td colspan="10" class="no-results">
-                                                <span x-show="search">No se encontraron solicitudes que coincidan con la búsqueda.</span>
-                                                <span x-show="!search">No hay solicitudes registradas.</span>
+                                                <span x-show="searchInput">No se encontraron solicitudes que coincidan con la búsqueda.</span>
+                                                <span x-show="!searchInput">No hay solicitudes registradas.</span>
                                             </td>
                                         </tr>
                                     </tbody>
@@ -597,19 +622,28 @@
                         <br>
                         <nav class="controls-container" aria-label="Paginación">
                             <div style="display:flex;align-items:center;gap:12px;justify-content:flex-end;width:100%">
-                                @if($solicitudes->onFirstPage())
-                                    <span class="btn-secondary" aria-disabled="true" tabindex="-1">Anterior</span>
-                                @else
-                                    <a href="{{ $solicitudes->previousPageUrl() }}" class="btn-secondary" aria-label="Página anterior">Anterior</a>
-                                @endif
-
+                                @php
+                                    $previousPage = $solicitudes->currentPage() - 1;
+                                    $nextPage = $solicitudes->currentPage() + 1;
+                                    
+                                    // Paginación circular
+                                    if ($previousPage < 1) {
+                                        $previousPage = $solicitudes->lastPage();
+                                    }
+                                    if ($nextPage > $solicitudes->lastPage()) {
+                                        $nextPage = 1;
+                                    }
+                                    
+                                    // Construir URLs preservando parámetros
+                                    $previousUrl = $solicitudes->url($previousPage);
+                                    $nextUrl = $solicitudes->url($nextPage);
+                                @endphp
+                                
+                                <a href="{{ $previousUrl }}" class="btn-secondary" aria-label="Página anterior">Anterior</a>
+                                
                                 <span class="counter-text">Página {{ $solicitudes->currentPage() }} de {{ $solicitudes->lastPage() }}</span>
-
-                                @if($solicitudes->hasMorePages())
-                                    <a href="{{ $solicitudes->nextPageUrl() }}" class="btn-secondary" aria-label="Página siguiente">Siguiente</a>
-                                @else
-                                    <span class="btn-secondary" aria-disabled="true" tabindex="-1">Siguiente</span>
-                                @endif
+                                
+                                <a href="{{ $nextUrl }}" class="btn-secondary" aria-label="Página siguiente">Siguiente</a>
                             </div>
                         </nav>
 
@@ -646,11 +680,11 @@
                             </div>
                         </div>
 
-                        <!-- Modal Confirmar Revisado -->
+                        <!-- Modal Confirmar Atendido -->
                         <div x-show="showReviewedModal" x-cloak class="modal-overlay" @click.self="showReviewedModal = false">
                             <div class="modal-content">
                                 <div class="modal-header">
-                                    <h3 class="text-lg font-semibold">Confirmar Revisado</h3>
+                                    <h3 class="text-lg font-semibold">Confirmar Atendido</h3>
                                     <button @click="showReviewedModal = false" class="btn-close" aria-label="Cerrar">
                                         <svg style="width: 24px; height: 24px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -670,11 +704,11 @@
                             </div>
                         </div>
 
-                        <!-- Modal Confirmar En Revisión -->
+                        <!-- Modal Confirmar Por Atender -->
                         <div x-show="showInReviewModal" x-cloak class="modal-overlay" @click.self="showInReviewModal = false">
                             <div class="modal-content">
                                 <div class="modal-header">
-                                    <h3 class="text-lg font-semibold">Confirmar En Revisión</h3>
+                                    <h3 class="text-lg font-semibold">Confirmar Por Atender</h3>
                                     <button @click="showInReviewModal = false" class="btn-close" aria-label="Cerrar">
                                         <svg style="width: 24px; height: 24px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -684,11 +718,31 @@
                                 <div class="modal-body">
                                     <p class="text-gray-600 mb-6">
                                         ¿Estás seguro de desmarcar la solicitud #<span x-text="inReviewData.id" class="font-semibold"></span> de
-                                        "<span x-text="inReviewData.nombreCompleto" class="font-semibold"></span>" que ya había sido revisada? Ahora estará como <span class="font-semibold">En revisión</span>.
+                                        "<span x-text="inReviewData.nombreCompleto" class="font-semibold"></span>" que ya había sido atendida? Ahora estará como <span class="font-semibold">Por atender</span>.
                                     </p>
                                     <div style="display: flex; justify-content: flex-end; gap: 12px;">
                                         <button type="button" @click="showInReviewModal = false" class="btn-secondary">Cancelar</button>
-                                        <button type="button" class="btn-primary" @click="confirmInReview()">En Revisión</button>
+                                        <button type="button" class="btn-primary" @click="confirmInReview()">Por Atender</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Modal Éxito Genérico -->
+                        <div x-show="showSuccessModal" x-cloak class="modal-overlay" @click.self="showSuccessModal = false">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h3 class="text-lg font-semibold" x-text="successTitle || 'Operación exitosa'"></h3>
+                                    <button @click="showSuccessModal = false" class="btn-close" aria-label="Cerrar">
+                                        <svg style="width: 24px; height: 24px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                </div>
+                                <div class="modal-body">
+                                    <p class="text-gray-600 mb-6" x-text="successMessage || 'Acción realizada correctamente.'"></p>
+                                    <div style="display: flex; justify-content: flex-end; gap: 12px;">
+                                        <button type="button" class="btn-primary" @click="showSuccessModal = false">Aceptar</button>
                                     </div>
                                 </div>
                             </div>
@@ -703,7 +757,7 @@
     <script>
         function solicitudesData() {
             return {
-                search: '',
+                searchInput: '',
                 showFilters: false,
                 statusFilter: '',
                 dateFilter: '',
@@ -715,6 +769,8 @@
                 servicios: [],
                 otrosServicios: [],
                 totalRows: 0,
+                filteredCount: 0,
+                totalAll: 0,
                 visibleRows: 0,
                 currentPage: 1,
                 lastPage: 1,
@@ -723,22 +779,12 @@
                 showInReviewModal: false,
                 inReviewData: {},
                 showAssignModal: false,
-                 assignData: {},
-                 toast: { show: false, message: '', type: 'success', timer: null },
-                 notify(msg, type = 'success') {
-                     this.toast.message = msg;
-                     this.toast.type = type;
-                     this.toast.show = true;
-                     if (this.toast.timer) {
-                         clearTimeout(this.toast.timer);
-                     }
-                     this.toast.timer = setTimeout(() => {
-                         this.toast.show = false;
-                         this.toast.timer = null;
-                     }, 4000);
-                 },
- 
-                 initServerValues() {
+                assignData: {},
+                showSuccessModal: false,
+                successTitle: '',
+                successMessage: '',
+
+                initServerValues() {
                     const d = this.$el.dataset;
                     
                     try {
@@ -778,44 +824,113 @@
                     }
 
                     this.totalRows = Number(d.total ?? 0);
+                    this.filteredCount = Number(d.total ?? 0);
+                    this.totalAll = Number(d.totalAll ?? 0);
                     this.visibleRows = Number(d.visible ?? 0);
                     this.currentPage = Number(d.current ?? 1);
                     this.lastPage = Number(d.last ?? 1);
+                    
+                    // Inicializar el input de búsqueda con el valor del servidor
+                    this.searchInput = d.searchParam || '';
                 },
 
-                onStatusChange() {
+                isNumeric(val) {
+                    return /^[0-9]+$/.test(String(val || '').trim());
+                },
+
+                clearSearch() {
+                    this.searchInput = '';
                     const url = new URL(window.location.href);
+                    url.searchParams.delete('search');
+                    url.searchParams.delete('page');
+                    this.fetchAndUpdate(url);
+                },
+
+                onSearchChange() {
+                    const url = new URL(window.location.href);
+                    const q = String(this.searchInput || '').trim();
+                    if (q) {
+                        url.searchParams.set('search', q);
+                    } else {
+                        url.searchParams.delete('search');
+                    }
+                    url.searchParams.delete('page');
+                    this.fetchAndUpdate(url);
+                },
+
+                onFiltersChange() {
+                    const url = new URL(window.location.href);
+                    const q = String(this.searchInput || '').trim();
+                    if (q) {
+                        url.searchParams.set('search', q);
+                    } else {
+                        url.searchParams.delete('search');
+                    }
+
+                    // Estatus
                     if (this.statusFilter && this.statusFilter !== 'todos') {
                         url.searchParams.set('status', this.statusFilter);
                     } else {
                         url.searchParams.delete('status');
                     }
-                    url.searchParams.delete('page');
-                    window.history.replaceState({}, '', url.toString());
-                },
 
-                onServiceChange() {
-                    const url = new URL(window.location.href);
-                    const val = String(this.servicioFilter || '').trim();
-                    
-                    if (val) {
-                        const isNumeric = /^[0-9]+$/.test(val);
-                        if (isNumeric) {
-                            url.searchParams.set('servicio_id', val);
+                    // Fecha
+                    if (this.dateFilter) {
+                        url.searchParams.set('fecha', this.dateFilter);
+                    } else {
+                        url.searchParams.delete('fecha');
+                    }
+
+                    // Coordinación
+                    if (this.coordinacionFilter) {
+                        url.searchParams.set('coordinacion_id', this.coordinacionFilter);
+                    } else {
+                        url.searchParams.delete('coordinacion_id');
+                    }
+
+                    // Servicio
+                    if (this.servicioFilter) {
+                        if (this.isNumeric(this.servicioFilter)) {
+                            url.searchParams.set('servicio_id', this.servicioFilter);
                             url.searchParams.delete('servicio');
-                        } else if (val === 'otros') {
-                            url.searchParams.set('servicio', 'otros');
-                            url.searchParams.delete('servicio_id');
                         } else {
-                            url.searchParams.delete('servicio');
+                            url.searchParams.set('servicio', this.servicioFilter);
                             url.searchParams.delete('servicio_id');
                         }
                     } else {
-                        url.searchParams.delete('servicio');
                         url.searchParams.delete('servicio_id');
+                        url.searchParams.delete('servicio');
                     }
+
+                    // Reiniciar a la primera página al cambiar filtros
                     url.searchParams.delete('page');
-                    window.history.replaceState({}, '', url.toString());
+                    this.fetchAndUpdate(url);
+                },
+
+                async fetchAndUpdate(url) {
+                    try {
+                        const endpoint = url.pathname + '?' + url.searchParams.toString();
+                        const res = await fetch(endpoint, {
+                            headers: { 'Accept': 'application/json' }
+                        });
+                        if (!res.ok) throw new Error('No se pudo obtener datos');
+                        const data = await res.json();
+                        this.updateFromResponse(data);
+                        // Actualiza la URL sin recargar para mantener navegación
+                        history.replaceState(null, '', url.toString());
+                    } catch (e) {
+                        console.error(e);
+                    }
+                },
+
+                updateFromResponse(data) {
+                    this.solicitudes = Array.isArray(data.items) ? data.items : [];
+                    this.filteredCount = Number(data.totalFiltered || 0);
+                    this.totalRows = this.filteredCount;
+                    this.visibleRows = Number(data.visibleCount || this.solicitudes.length || 0);
+                    this.currentPage = Number(data.currentPage || 1);
+                    this.lastPage = Number(data.lastPage || 1);
+                    this.totalAll = Number(data.totalAll || this.totalAll || 0);
                 },
 
                 openAssignModal(solicitud) {
@@ -831,7 +946,7 @@
 
                 async confirmAssign() {
                     if (!this.assignData.selectedCoordinacion) {
-                        this.notify('Por favor selecciona una coordinación.', 'error');
+                        alert('Por favor selecciona una coordinación.');
                         return;
                     }
 
@@ -862,10 +977,12 @@
                         this.assignData.ref.fecha_actualizacion = data.fecha_actualizacion;
                         
                         this.showAssignModal = false;
-                        this.notify('Coordinación asignada exitosamente.', 'success');
+                        this.successTitle = 'Coordinación asignada';
+                        this.successMessage = 'Coordinación asignada exitosamente.';
+                        this.showSuccessModal = true;
                     } catch (e) {
                         console.error(e);
-                        this.notify('Ocurrió un error al asignar la coordinación: ' + e.message, 'error');
+                        alert('Ocurrió un error al asignar la coordinación: ' + e.message);
                     }
                 },
 
@@ -910,11 +1027,12 @@
                         
                         this.reviewedData.ref.estatus = 'revisado';
                         this.reviewedData.ref.fecha_actualizacion = data.fecha_actualizacion || this.reviewedData.ref.fecha_actualizacion;
+                        this.reviewedData.ref.fecha_atendida = data.fecha_atendida || this.reviewedData.ref.fecha_atendida;
                         
                         this.showReviewedModal = false;
                     } catch (e) {
                         console.error(e);
-                        this.notify('Ocurrió un error al marcar como revisado.', 'error');
+                        alert('Ocurrió un error al marcar como revisado.');
                     }
                 },
 
@@ -939,74 +1057,13 @@
                         
                         this.inReviewData.ref.estatus = 'en_revision';
                         this.inReviewData.ref.fecha_actualizacion = data.fecha_actualizacion || this.inReviewData.ref.fecha_actualizacion;
+                        this.inReviewData.ref.fecha_atendida = null;
                         
                         this.showInReviewModal = false;
                     } catch (e) {
                         console.error(e);
-                        this.notify('Ocurrió un error al revertir la solicitud a En Revisión.', 'error');
+                        alert('Ocurrió un error al revertir la solicitud a En Revisión.');
                     }
-                },
-
-                get filteredSolicitudes() {
-                    let items = [...this.solicitudes];
-
-                    if (this.statusFilter && this.statusFilter !== 'todos') {
-                        const sf = this.statusFilter.toLowerCase();
-                        items = items.filter(s => (s.estatus || '').toLowerCase() === sf);
-                    }
-
-                    if (this.dateFilter) {
-                        const start = new Date(this.dateFilter + 'T00:00:00');
-                        const end = new Date(this.dateFilter + 'T23:59:59');
-                        items = items.filter(s => {
-                            const d = s.fecha_solicitud ? new Date(s.fecha_solicitud) : null;
-                            return d && d >= start && d <= end;
-                        });
-                    }
-
-                    if (this.coordinacionFilter) {
-                        const cf = parseInt(this.coordinacionFilter, 10);
-                        items = items.filter(s => Number(s.coordinacion_id) === cf);
-                    }
-
-                    if (this.servicioFilter) {
-                        const val = String(this.servicioFilter).trim();
-                        const isNumeric = /^[0-9]+$/.test(val);
-                        
-                        if (isNumeric) {
-                            const sid = parseInt(val, 10);
-                            items = items.filter(s => Number(s.servicio_id) === sid);
-                        } else if (val === 'otros') {
-                            items = items.filter(s => {
-                                const otroTexto = String(s.servicio_otro || '').trim();
-                                const nombreServicio = String((s.servicio && s.servicio.nombre) || '').toLowerCase();
-                                return (otroTexto.length > 0) || (nombreServicio === 'otro');
-                            });
-                        }
-                    }
-
-                    if (!this.search) {
-                        this.visibleRows = items.length;
-                        return items.sort((a, b) => b.id - a.id);
-                    }
-
-                    const filtered = items.filter(solicitud => {
-                        const searchTerm = this.search.toLowerCase();
-                        const fullName = (solicitud.nombres + ' ' + solicitud.apellido_paterno + ' ' + (solicitud.apellido_materno || '')).toLowerCase();
-                        
-                        return fullName.includes(searchTerm) ||
-                               (solicitud.telefono && solicitud.telefono.toLowerCase().includes(searchTerm)) ||
-                               (solicitud.correo_electronico && solicitud.correo_electronico.toLowerCase().includes(searchTerm)) ||
-                               (solicitud.entidad_procedencia && solicitud.entidad_procedencia.nombre && solicitud.entidad_procedencia.nombre.toLowerCase().includes(searchTerm)) ||
-                               (solicitud.entidad_otra && solicitud.entidad_otra.toLowerCase().includes(searchTerm)) ||
-                               (solicitud.servicio && solicitud.servicio.nombre && solicitud.servicio.nombre.toLowerCase().includes(searchTerm)) ||
-                               (solicitud.servicio_otro && solicitud.servicio_otro.toLowerCase().includes(searchTerm)) ||
-                               (solicitud.coordinacion && solicitud.coordinacion.nombre && solicitud.coordinacion.nombre.toLowerCase().includes(searchTerm)) ||
-                               (solicitud.estatus && solicitud.estatus.toLowerCase().includes(searchTerm));
-                    });
-
-                    this.visibleRows = filtered.length;
-                    return filtered.sort((a, b) => b.id - a.id);
                 },
 
                 formatDate(dateString) {
@@ -1025,11 +1082,24 @@
                 formatStatus(s) {
                     const map = {
                         'todos': 'Todos',
-                        'en_revision': 'En revisión',
-                        'revisado': 'Revisado'
+                        'en_revision': 'Por atender',
+                        'revisado': 'Atendido'
                     };
                     const k = (s || '').toLowerCase();
                     return map[k] ?? (s || 'N/A');
+                },
+
+                displayStatusLabel(solicitud) {
+                    const est = (solicitud.estatus || '').toLowerCase();
+                    // Solo dos estados visibles en la columna: Por atender / Atendido
+                    return this.formatStatus(est);
+                },
+
+                displayStatusClass(solicitud) {
+                    const est = (solicitud.estatus || '').toLowerCase();
+                    // Clases coherentes con los dos estados mostrados
+                    if (est === 'revisado') return 'status-revisado';
+                    return 'status-en_revision';
                 },
 
                 initScrollSync() {
@@ -1096,12 +1166,20 @@
                 },
 
                 clearFilters() {
-                    this.statusFilter = '';
+                    this.statusFilter = 'todos';
                     this.dateFilter = '';
                     this.coordinacionFilter = '';
                     this.servicioFilter = '';
-                    this.search = '';
-                    this.showFilters = true;
+                    
+                    // URL limpia manteniendo solo la búsqueda si existe
+                    const url = new URL(window.location.href);
+                    url.searchParams.delete('status');
+                    url.searchParams.delete('fecha');
+                    url.searchParams.delete('coordinacion_id');
+                    url.searchParams.delete('servicio_id');
+                    url.searchParams.delete('servicio');
+                    url.searchParams.delete('page');
+                    this.fetchAndUpdate(url);
                 }
             };
         }

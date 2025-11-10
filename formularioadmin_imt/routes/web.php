@@ -74,6 +74,10 @@ Route::delete('/coordinaciones/{coordinacion}', [AdminController::class, 'coordi
 Route::post('/coordinaciones/representante', [AdminController::class, 'coordinacionesRepresentativeUpdate'])
     ->middleware(['auth', 'verified'])->name('coordinaciones.representante.update');
 
+// Cambio de contraseña del representante
+Route::post('/coordinaciones/representante/password', [AdminController::class, 'coordinacionesRepresentativeUpdatePassword'])
+    ->middleware(['auth', 'verified'])->name('coordinaciones.representante.update_password');
+
 // ========== RUTAS DE ENTIDADES DE PROCEDENCIA ==========
 Route::get('/entidades-procedencia', [AdminController::class, 'entidadesProcedenciaIndex'])
     ->middleware(['auth', 'verified'])->name('entidades-procedencia');

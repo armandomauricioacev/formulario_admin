@@ -50,6 +50,7 @@ class SolicitudesServicio extends Model
         'estatus',
         'fecha_solicitud',
         'fecha_actualizacion',
+        'fecha_atendida',
     ];
 
     /**
@@ -63,6 +64,7 @@ class SolicitudesServicio extends Model
         'coordinacion_id' => 'integer',
         'fecha_solicitud' => 'datetime',
         'fecha_actualizacion' => 'datetime',
+        'fecha_atendida' => 'datetime',
     ];
 
     /**
