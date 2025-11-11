@@ -10,6 +10,13 @@ use App\Models\Coordinaciones;
 use App\Models\EntidadesProcedencia;
 use App\Models\Servicios;
 use App\Models\SolicitudesServicio;
+use Dompdf\Dompdf;
+use Dompdf\Options;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
+use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
 
 class AdminController extends Controller
 {
@@ -527,6 +534,221 @@ class AdminController extends Controller
         'totalAll' => $totalAll,
     ]);
 }
+
+    /**
+     * Exporta solicitudes filtradas a PDF respetando los filtros de la vista.
+     */
+    public function solicitudesServiciosExportPdf(Request $request)
+    {
+        // Construir el mismo query que en el índice, pero sin paginar
+        $status = $request->query('status');
+        $servicioId = $request->query('servicio_id');
+        $servicio = $request->query('servicio');
+        $coordinacionId = $request->query('coordinacion_id');
+        $fechaFilter = $request->query('fecha');
+        $search = trim($request->query('search', ''));
+
+        $query = SolicitudesServicio::with(['entidadProcedencia', 'servicio', 'coordinacion'])
+            ->orderBy('id', 'desc');
+
+        if (!empty($status) && $status !== 'todos') {
+            $query->where('estatus', $status);
+        }
+        if (!empty($servicioId) && is_numeric($servicioId)) {
+            $query->where('servicio_id', $servicioId);
+        } elseif (!empty($servicio) && $servicio === 'otros') {
+            $query->where(function($q) {
+                $q->whereNotNull('servicio_otro')
+                  ->where('servicio_otro', '!=', '');
+            });
+        }
+        if (!empty($coordinacionId) && is_numeric($coordinacionId)) {
+            $query->where('coordinacion_id', $coordinacionId);
+        }
+        if (!empty($fechaFilter)) {
+            $query->whereDate('fecha_solicitud', $fechaFilter);
+        }
+        if (!empty($search)) {
+            $query->where(function ($q) use ($search) {
+                $like = '%' . $search . '%';
+                $q->where('nombres', 'like', $like)
+                  ->orWhere('apellido_paterno', 'like', $like)
+                  ->orWhere('apellido_materno', 'like', $like)
+                  ->orWhere('telefono', 'like', $like)
+                  ->orWhere('correo_electronico', 'like', $like)
+                  ->orWhere('entidad_otra', 'like', $like)
+                  ->orWhere('servicio_otro', 'like', $like)
+                  ->orWhere('estatus', 'like', $like)
+                  ->orWhereHas('entidadProcedencia', function ($qq) use ($like) { $qq->where('nombre', 'like', $like); })
+                  ->orWhereHas('servicio', function ($qq) use ($like) { $qq->where('nombre', 'like', $like); })
+                  ->orWhereHas('coordinacion', function ($qq) use ($like) { $qq->where('nombre', 'like', $like); });
+            });
+        }
+
+        $items = $query->get();
+
+        // Renderizar HTML vía Blade y convertir a PDF con Dompdf
+        $html = view('exports.solicitudes_pdf', [ 'items' => $items ])->render();
+
+        $options = new Options();
+        $options->set('isRemoteEnabled', true);
+        $dompdf = new Dompdf($options);
+        $dompdf->loadHtml($html);
+        $dompdf->setPaper('A4', 'landscape');
+        $dompdf->render();
+
+        $filename = 'Servicios IMT.pdf';
+        return response($dompdf->output(), 200)
+            ->header('Content-Type', 'application/pdf')
+            ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
+    }
+
+    /**
+     * Exporta solicitudes filtradas a Excel (XLSX) con formato.
+     */
+    public function solicitudesServiciosExportExcel(Request $request)
+    {
+        // Reutilizar misma lógica de filtros
+        $status = $request->query('status');
+        $servicioId = $request->query('servicio_id');
+        $servicio = $request->query('servicio');
+        $coordinacionId = $request->query('coordinacion_id');
+        $fechaFilter = $request->query('fecha');
+        $search = trim($request->query('search', ''));
+
+        $query = SolicitudesServicio::with(['entidadProcedencia', 'servicio', 'coordinacion'])
+            ->orderBy('id', 'desc');
+
+        if (!empty($status) && $status !== 'todos') {
+            $query->where('estatus', $status);
+        }
+        if (!empty($servicioId) && is_numeric($servicioId)) {
+            $query->where('servicio_id', $servicioId);
+        } elseif (!empty($servicio) && $servicio === 'otros') {
+            $query->where(function($q) {
+                $q->whereNotNull('servicio_otro')
+                  ->where('servicio_otro', '!=', '');
+            });
+        }
+        if (!empty($coordinacionId) && is_numeric($coordinacionId)) {
+            $query->where('coordinacion_id', $coordinacionId);
+        }
+        if (!empty($fechaFilter)) {
+            $query->whereDate('fecha_solicitud', $fechaFilter);
+        }
+        if (!empty($search)) {
+            $query->where(function ($q) use ($search) {
+                $like = '%' . $search . '%';
+                $q->where('nombres', 'like', $like)
+                  ->orWhere('apellido_paterno', 'like', $like)
+                  ->orWhere('apellido_materno', 'like', $like)
+                  ->orWhere('telefono', 'like', $like)
+                  ->orWhere('correo_electronico', 'like', $like)
+                  ->orWhere('entidad_otra', 'like', $like)
+                  ->orWhere('servicio_otro', 'like', $like)
+                  ->orWhere('estatus', 'like', $like)
+                  ->orWhereHas('entidadProcedencia', function ($qq) use ($like) { $qq->where('nombre', 'like', $like); })
+                  ->orWhereHas('servicio', function ($qq) use ($like) { $qq->where('nombre', 'like', $like); })
+                  ->orWhereHas('coordinacion', function ($qq) use ($like) { $qq->where('nombre', 'like', $like); });
+            });
+        }
+
+        $items = $query->get();
+
+        // Crear hoja de cálculo
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Solicitudes');
+
+        // Encabezados
+        $headers = ['ID','Nombre','Telefono','Correo','Entidad','Servicio','Coordinacion','Estatus','Fecha Solicitud','Fecha Atendida'];
+        $col = 'A';
+        foreach ($headers as $header) {
+            $sheet->setCellValue($col.'1', $header);
+            $col++;
+        }
+        // Estilo de encabezados
+        $sheet->getStyle('A1:J1')->getFont()->setBold(true);
+        $sheet->getStyle('A1:J1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
+
+        // Filas de datos
+        $row = 2;
+        foreach ($items as $s) {
+            $nombre = trim(($s->nombres ?? '').' '.($s->apellido_paterno ?? '').' '.($s->apellido_materno ?? ''));
+            $entidad = $s->entidadProcedencia ? ($s->entidadProcedencia->nombre ?? '') : ($s->entidad_otra ?? '');
+            $servicioNombre = $s->servicio ? ($s->servicio->nombre ?? '') : ($s->servicio_otro ?? '');
+            $coordinacionNombre = $s->coordinacion ? ($s->coordinacion->nombre ?? '') : '';
+
+            $sheet->setCellValue('A'.$row, $s->id);
+            $sheet->setCellValue('B'.$row, $nombre);
+            $sheet->setCellValue('C'.$row, $s->telefono);
+            $sheet->setCellValue('D'.$row, $s->correo_electronico);
+            $sheet->setCellValue('E'.$row, $entidad);
+            $sheet->setCellValue('F'.$row, $servicioNombre);
+            $sheet->setCellValue('G'.$row, $coordinacionNombre);
+            // Mapear estatus para presentación
+            $estatusPresentacion = match ($s->estatus) {
+                'en_revision' => 'Por atender',
+                'revisado' => 'Atendido',
+                default => $s->estatus,
+            };
+            $sheet->setCellValue('H'.$row, $estatusPresentacion);
+
+            // Fechas como valores de fecha de Excel (no texto)
+            if (!empty($s->fecha_solicitud)) {
+                $sheet->setCellValue('I'.$row, ExcelDate::dateTimeToExcel($s->fecha_solicitud));
+            } else {
+                $sheet->setCellValue('I'.$row, null);
+            }
+            if (!empty($s->fecha_atendida)) {
+                $sheet->setCellValue('J'.$row, ExcelDate::dateTimeToExcel($s->fecha_atendida));
+            } else {
+                $sheet->setCellValue('J'.$row, null);
+            }
+
+            $row++;
+        }
+
+        $lastRow = $row - 1;
+
+        // Formato de fecha estándar de Excel (DateTime)
+        $sheet->getStyle('I2:I'.$lastRow)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_DATE_DATETIME);
+        $sheet->getStyle('J2:J'.$lastRow)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_DATE_DATETIME);
+
+        // Centrar datos
+        $sheet->getStyle('A2:J'.$lastRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
+
+        // Ancho de columnas para evitar #######
+        $sheet->getColumnDimension('A')->setWidth(8);
+        $sheet->getColumnDimension('B')->setWidth(30);
+        $sheet->getColumnDimension('C')->setWidth(18);
+        $sheet->getColumnDimension('D')->setWidth(35);
+        $sheet->getColumnDimension('E')->setWidth(22);
+        $sheet->getColumnDimension('F')->setWidth(28);
+        $sheet->getColumnDimension('G')->setWidth(22);
+        $sheet->getColumnDimension('H')->setWidth(18);
+        // Ampliar columnas de fecha y activar auto size (fallback)
+        $sheet->getColumnDimension('I')->setWidth(36);
+        $sheet->getColumnDimension('J')->setWidth(36);
+        $sheet->getColumnDimension('I')->setAutoSize(true);
+        $sheet->getColumnDimension('J')->setAutoSize(true);
+
+        // Borde y ajuste de texto opcional (para estética)
+        $sheet->getStyle('A1:J'.$lastRow)->getAlignment()->setWrapText(false);
+
+        // Generar archivo XLSX en memoria y responder
+        $filename = 'Servicios IMT.xlsx';
+        $writer = new Xlsx($spreadsheet);
+        ob_start();
+        $writer->save('php://output');
+        $excelOutput = ob_get_clean();
+
+        return response($excelOutput, 200, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Cache-Control' => 'max-age=0',
+        ]);
+    }
 
     public function solicitudesServiciosDestroy($id)
     {

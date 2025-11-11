@@ -106,6 +106,12 @@ Route::delete('/servicios/{servicio}', [AdminController::class, 'serviciosDestro
 Route::get('/solicitudes', [AdminController::class, 'solicitudesServiciosIndex'])
     ->middleware(['auth', 'verified'])->name('solicitudes');
 
+// Exportaciones de Solicitudes (respetan filtros actuales)
+Route::get('/solicitudes/export/pdf', [AdminController::class, 'solicitudesServiciosExportPdf'])
+    ->middleware(['auth', 'verified'])->name('solicitudes.export.pdf');
+Route::get('/solicitudes/export/excel', [AdminController::class, 'solicitudesServiciosExportExcel'])
+    ->middleware(['auth', 'verified'])->name('solicitudes.export.excel');
+
 // Eliminar solicitud individual
 Route::delete('/solicitudes/{solicitud}', [AdminController::class, 'solicitudesServiciosDestroy'])
     ->middleware(['auth', 'verified'])->name('solicitudes.destroy');

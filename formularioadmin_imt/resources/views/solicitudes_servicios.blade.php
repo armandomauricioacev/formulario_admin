@@ -199,6 +199,33 @@
                         }
                         .btn-secondary:hover { background: #4b5563; }
 
+                        /* Botones específicos para descargas */
+                        .btn-pdf {
+                            background: #dc2626; /* rojo */
+                            color: #ffffff;
+                            padding: 8px 12px;
+                            border-radius: 6px;
+                            border: none;
+                            font-size: 14px;
+                            font-weight: 500;
+                            cursor: pointer;
+                            transition: background 0.2s ease;
+                        }
+                        .btn-pdf:hover { background: #b91c1c; }
+
+                        .btn-excel {
+                            background: #16a34a; /* verde */
+                            color: #ffffff;
+                            padding: 8px 12px;
+                            border-radius: 6px;
+                            border: none;
+                            font-size: 14px;
+                            font-weight: 500;
+                            cursor: pointer;
+                            transition: background 0.2s ease;
+                        }
+                        .btn-excel:hover { background: #15803d; }
+
                         .btn-warning {
                             background: #f59e0b;
                             color: #ffffff;
@@ -262,7 +289,9 @@
                         .btn-delete:hover { background: #dc2626; }
 
                         .modal-body .btn-secondary,
-                        .modal-body .btn-delete {
+                        .modal-body .btn-delete,
+                        .modal-body .btn-pdf,
+                        .modal-body .btn-excel {
                             min-width: 120px;
                         }
 
@@ -483,6 +512,10 @@
                                 </div>
                                 <button type="button" @click="clearSearch()" x-show="searchInput" class="btn-clear-search">
                                     Limpiar
+                                </button>
+                                <!-- Botón Descargar a la derecha de la barra de búsqueda -->
+                                <button type="button" class="btn-secondary" @click="openDownloadModal()">
+                                    Descargar
                                 </button>
                             </div>
 
@@ -748,6 +781,27 @@
                             </div>
                         </div>
 
+                        <!-- Modal Descargar -->
+                        <div x-show="showDownloadModal" x-cloak class="modal-overlay" @click.self="showDownloadModal = false">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h3 class="text-lg font-semibold">Descargar datos</h3>
+                                    <button @click="showDownloadModal = false" class="btn-close" aria-label="Cerrar">
+                                        <svg style="width: 24px; height: 24px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                </div>
+                                <div class="modal-body">
+                                    <p class="text-gray-600 mb-4">El archivo incluirá los datos según los filtros aplicados.</p>
+                                    <div style="display:flex; gap: 12px; justify-content: flex-end;">
+                                        <button type="button" class="btn-pdf" @click="download('pdf')">Descargar PDF</button>
+                                        <button type="button" class="btn-excel" @click="download('excel')">Descargar Excel</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
             </div>
@@ -783,6 +837,7 @@
                 showSuccessModal: false,
                 successTitle: '',
                 successMessage: '',
+                showDownloadModal: false,
 
                 initServerValues() {
                     const d = this.$el.dataset;
@@ -1006,6 +1061,10 @@
                     this.showInReviewModal = true;
                 },
 
+                openDownloadModal() {
+                    this.showDownloadModal = true;
+                },
+
                 async confirmReviewed() {
                     try {
                         const token = document.querySelector('meta[name=csrf-token]')?.getAttribute('content');
@@ -1180,6 +1239,33 @@
                     url.searchParams.delete('servicio');
                     url.searchParams.delete('page');
                     this.fetchAndUpdate(url);
+                },
+
+                download(type) {
+                    const url = new URL(window.location.origin + `/solicitudes/export/` + (type === 'excel' ? 'excel' : 'pdf'));
+                    const q = String(this.searchInput || '').trim();
+                    if (q) url.searchParams.set('search', q);
+
+                    if (this.statusFilter && this.statusFilter !== 'todos') {
+                        url.searchParams.set('status', this.statusFilter);
+                    }
+                    if (this.dateFilter) {
+                        url.searchParams.set('fecha', this.dateFilter);
+                    }
+                    if (this.coordinacionFilter) {
+                        url.searchParams.set('coordinacion_id', this.coordinacionFilter);
+                    }
+                    if (this.servicioFilter) {
+                        if (this.isNumeric(this.servicioFilter)) {
+                            url.searchParams.set('servicio_id', this.servicioFilter);
+                        } else {
+                            url.searchParams.set('servicio', this.servicioFilter);
+                        }
+                    }
+
+                    // Cerrar modal y navegar al endpoint de descarga
+                    this.showDownloadModal = false;
+                    window.location.href = url.toString();
                 }
             };
         }
