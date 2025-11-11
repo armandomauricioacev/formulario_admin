@@ -4,6 +4,7 @@
             Correos de Notificación
         </h2>
     </x-slot>
+    <div class="min-h-screen flex flex-col">
 
     <div class="py-6">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
@@ -121,5 +122,9 @@
                 </div>
             </form>
         </div>
+    </div>
+    <footer class="mt-auto py-2 text-center text-xs text-gray-500">
+        Desarrollado por la División de Telemática
+    </footer>
     </div>
 </x-app-layout>

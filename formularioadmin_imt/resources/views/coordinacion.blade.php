@@ -4,6 +4,7 @@
             {{ __('Coordinaciones') }}
         </h2>
     </x-slot>
+    <div class="min-h-screen flex flex-col">
 
     <style>
         [x-cloak] { display: none !important; }
@@ -811,4 +812,8 @@
             }, 100);
         });
     </script>
+    <footer class="mt-auto py-2 text-center text-xs text-gray-500">
+        Desarrollado por la División de Telemática
+    </footer>
+    </div>
 </x-app-layout>

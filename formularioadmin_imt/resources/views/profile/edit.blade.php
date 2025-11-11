@@ -4,7 +4,7 @@
             {{ __('Perfil') }}
         </h2>
     </x-slot>
-
+    <div class="min-h-screen flex flex-col">
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
             <div class="p-4 sm:p-8 bg-white shadow sm:rounded-lg">
@@ -25,5 +25,9 @@
                 </div>
             </div>
         </div>
+    </div>
+    <footer class="mt-auto py-2 text-center text-xs text-gray-500">
+        Desarrollado por la División de Telemática
+    </footer>
     </div>
 </x-app-layout>
