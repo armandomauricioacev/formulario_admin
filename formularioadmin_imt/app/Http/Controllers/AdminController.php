@@ -10,8 +10,6 @@ use App\Models\Coordinaciones;
 use App\Models\EntidadesProcedencia;
 use App\Models\Servicios;
 use App\Models\SolicitudesServicio;
-use Dompdf\Dompdf;
-use Dompdf\Options;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
@@ -440,7 +438,9 @@ class AdminController extends Controller
     $servicioId = $request->query('servicio_id');
     $servicio = $request->query('servicio');
     $coordinacionId = $request->query('coordinacion_id');
-    $fechaFilter = $request->query('fecha');
+    // Nuevo rango de fechas para fecha_solicitud
+    $fechaDesde = $request->query('fecha_desde');
+    $fechaHasta = $request->query('fecha_hasta');
     $search = trim($request->query('search', ''));
 
     $query = SolicitudesServicio::with(['entidadProcedencia', 'servicio', 'coordinacion'])
@@ -468,9 +468,12 @@ class AdminController extends Controller
         $query->where('coordinacion_id', $coordinacionId);
     }
 
-    // Filtro de fecha
-    if (!empty($fechaFilter)) {
-        $query->whereDate('fecha_solicitud', $fechaFilter);
+    // Filtro de fecha por rango (Desde/Hasta)
+    if (!empty($fechaDesde)) {
+        $query->whereDate('fecha_solicitud', '>=', $fechaDesde);
+    }
+    if (!empty($fechaHasta)) {
+        $query->whereDate('fecha_solicitud', '<=', $fechaHasta);
     }
 
     // Búsqueda global en TODA la base de datos - CORREGIDO
@@ -540,67 +543,10 @@ class AdminController extends Controller
      */
     public function solicitudesServiciosExportPdf(Request $request)
     {
-        // Construir el mismo query que en el índice, pero sin paginar
-        $status = $request->query('status');
-        $servicioId = $request->query('servicio_id');
-        $servicio = $request->query('servicio');
-        $coordinacionId = $request->query('coordinacion_id');
-        $fechaFilter = $request->query('fecha');
-        $search = trim($request->query('search', ''));
-
-        $query = SolicitudesServicio::with(['entidadProcedencia', 'servicio', 'coordinacion'])
-            ->orderBy('id', 'desc');
-
-        if (!empty($status) && $status !== 'todos') {
-            $query->where('estatus', $status);
-        }
-        if (!empty($servicioId) && is_numeric($servicioId)) {
-            $query->where('servicio_id', $servicioId);
-        } elseif (!empty($servicio) && $servicio === 'otros') {
-            $query->where(function($q) {
-                $q->whereNotNull('servicio_otro')
-                  ->where('servicio_otro', '!=', '');
-            });
-        }
-        if (!empty($coordinacionId) && is_numeric($coordinacionId)) {
-            $query->where('coordinacion_id', $coordinacionId);
-        }
-        if (!empty($fechaFilter)) {
-            $query->whereDate('fecha_solicitud', $fechaFilter);
-        }
-        if (!empty($search)) {
-            $query->where(function ($q) use ($search) {
-                $like = '%' . $search . '%';
-                $q->where('nombres', 'like', $like)
-                  ->orWhere('apellido_paterno', 'like', $like)
-                  ->orWhere('apellido_materno', 'like', $like)
-                  ->orWhere('telefono', 'like', $like)
-                  ->orWhere('correo_electronico', 'like', $like)
-                  ->orWhere('entidad_otra', 'like', $like)
-                  ->orWhere('servicio_otro', 'like', $like)
-                  ->orWhere('estatus', 'like', $like)
-                  ->orWhereHas('entidadProcedencia', function ($qq) use ($like) { $qq->where('nombre', 'like', $like); })
-                  ->orWhereHas('servicio', function ($qq) use ($like) { $qq->where('nombre', 'like', $like); })
-                  ->orWhereHas('coordinacion', function ($qq) use ($like) { $qq->where('nombre', 'like', $like); });
-            });
-        }
-
-        $items = $query->get();
-
-        // Renderizar HTML vía Blade y convertir a PDF con Dompdf
-        $html = view('exports.solicitudes_pdf', [ 'items' => $items ])->render();
-
-        $options = new Options();
-        $options->set('isRemoteEnabled', true);
-        $dompdf = new Dompdf($options);
-        $dompdf->loadHtml($html);
-        $dompdf->setPaper('A4', 'landscape');
-        $dompdf->render();
-
-        $filename = 'Servicios IMT.pdf';
-        return response($dompdf->output(), 200)
-            ->header('Content-Type', 'application/pdf')
-            ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
+        // La exportación a PDF ha sido deshabilitada.
+        return response()->json([
+            'message' => 'La exportación a PDF no está disponible. Use la exportación a Excel.'
+        ], 410);
     }
 
     /**
@@ -613,7 +559,9 @@ class AdminController extends Controller
         $servicioId = $request->query('servicio_id');
         $servicio = $request->query('servicio');
         $coordinacionId = $request->query('coordinacion_id');
-        $fechaFilter = $request->query('fecha');
+        // Nuevo rango de fechas para fecha_solicitud
+        $fechaDesde = $request->query('fecha_desde');
+        $fechaHasta = $request->query('fecha_hasta');
         $search = trim($request->query('search', ''));
 
         $query = SolicitudesServicio::with(['entidadProcedencia', 'servicio', 'coordinacion'])
@@ -633,8 +581,12 @@ class AdminController extends Controller
         if (!empty($coordinacionId) && is_numeric($coordinacionId)) {
             $query->where('coordinacion_id', $coordinacionId);
         }
-        if (!empty($fechaFilter)) {
-            $query->whereDate('fecha_solicitud', $fechaFilter);
+        // Filtro de fecha por rango (Desde/Hasta)
+        if (!empty($fechaDesde)) {
+            $query->whereDate('fecha_solicitud', '>=', $fechaDesde);
+        }
+        if (!empty($fechaHasta)) {
+            $query->whereDate('fecha_solicitud', '<=', $fechaHasta);
         }
         if (!empty($search)) {
             $query->where(function ($q) use ($search) {

@@ -16,7 +16,7 @@
             </div>
         </div>
         <footer class="mt-auto py-2 text-center text-xs text-gray-500">
-            Desarrollado por la División de Telemática
+© 2025 IMT - Desarrollado por la División de Telemática
         </footer>
     </div>
 </x-app-layout>

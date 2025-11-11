@@ -21,7 +21,7 @@
 {{-- Footer --}}
 <x-slot:footer>
 <x-mail::footer>
-{{ config('app.name') }}. {{ __('Desarrollado por la División de Telemática.') }}
+{{ config('app.name') }}. {{ __('© 2025 IMT - Desarrollado por la División de Telemática.') }}
 </x-mail::footer>
 </x-slot:footer>
 </x-mail::layout>

@@ -199,20 +199,6 @@
                         }
                         .btn-secondary:hover { background: #4b5563; }
 
-                        /* Botones específicos para descargas */
-                        .btn-pdf {
-                            background: #dc2626; /* rojo */
-                            color: #ffffff;
-                            padding: 8px 12px;
-                            border-radius: 6px;
-                            border: none;
-                            font-size: 14px;
-                            font-weight: 500;
-                            cursor: pointer;
-                            transition: background 0.2s ease;
-                        }
-                        .btn-pdf:hover { background: #b91c1c; }
-
                         .btn-excel {
                             background: #16a34a; /* verde */
                             color: #ffffff;
@@ -290,7 +276,6 @@
 
                         .modal-body .btn-secondary,
                         .modal-body .btn-delete,
-                        .modal-body .btn-pdf,
                         .modal-body .btn-excel {
                             min-width: 120px;
                         }
@@ -540,8 +525,12 @@
                                     </select>
                                 </div>
                                 <div class="filter-group">
-                                    <label class="filter-label">Fecha de solicitud</label>
-                                    <input type="date" class="filter-input" x-model="dateFilter" @change="onFiltersChange" />
+                                    <label class="filter-label">Fecha de solicitud "Desde"</label>
+                                    <input type="date" class="filter-input" x-model="dateFrom" @change="onFiltersChange" />
+                                </div>
+                                <div class="filter-group">
+                                    <label class="filter-label">Fecha de solicitud "Hasta"</label>
+                                    <input type="date" class="filter-input" x-model="dateTo" @change="onFiltersChange" />
                                 </div>
                                 <div class="filter-group">
                                     <label class="filter-label">Coordinación</label>
@@ -795,7 +784,6 @@
                                 <div class="modal-body">
                                     <p class="text-gray-600 mb-4">El archivo incluirá los datos según los filtros aplicados.</p>
                                     <div style="display:flex; gap: 12px; justify-content: flex-end;">
-                                        <button type="button" class="btn-pdf" @click="download('pdf')">Descargar PDF</button>
                                         <button type="button" class="btn-excel" @click="download('excel')">Descargar Excel</button>
                                     </div>
                                 </div>
@@ -814,7 +802,8 @@
                 searchInput: '',
                 showFilters: false,
                 statusFilter: '',
-                dateFilter: '',
+                dateFrom: '',
+                dateTo: '',
                 coordinacionFilter: '',
                 servicioFilter: '',
                 availableStatuses: ['todos', 'en_revision', 'revisado'],
@@ -887,6 +876,16 @@
                     
                     // Inicializar el input de búsqueda con el valor del servidor
                     this.searchInput = d.searchParam || '';
+
+                    // Inicializar rango de fechas desde la URL (si existe)
+                    try {
+                        const params = new URL(window.location.href).searchParams;
+                        this.dateFrom = params.get('fecha_desde') || '';
+                        this.dateTo = params.get('fecha_hasta') || '';
+                    } catch (e) {
+                        this.dateFrom = '';
+                        this.dateTo = '';
+                    }
                 },
 
                 isNumeric(val) {
@@ -929,11 +928,16 @@
                         url.searchParams.delete('status');
                     }
 
-                    // Fecha
-                    if (this.dateFilter) {
-                        url.searchParams.set('fecha', this.dateFilter);
+                    // Fecha (rango)
+                    if (this.dateFrom) {
+                        url.searchParams.set('fecha_desde', this.dateFrom);
                     } else {
-                        url.searchParams.delete('fecha');
+                        url.searchParams.delete('fecha_desde');
+                    }
+                    if (this.dateTo) {
+                        url.searchParams.set('fecha_hasta', this.dateTo);
+                    } else {
+                        url.searchParams.delete('fecha_hasta');
                     }
 
                     // Coordinación
@@ -1226,14 +1230,16 @@
 
                 clearFilters() {
                     this.statusFilter = 'todos';
-                    this.dateFilter = '';
+                    this.dateFrom = '';
+                    this.dateTo = '';
                     this.coordinacionFilter = '';
                     this.servicioFilter = '';
                     
                     // URL limpia manteniendo solo la búsqueda si existe
                     const url = new URL(window.location.href);
                     url.searchParams.delete('status');
-                    url.searchParams.delete('fecha');
+                    url.searchParams.delete('fecha_desde');
+                    url.searchParams.delete('fecha_hasta');
                     url.searchParams.delete('coordinacion_id');
                     url.searchParams.delete('servicio_id');
                     url.searchParams.delete('servicio');
@@ -1249,8 +1255,11 @@
                     if (this.statusFilter && this.statusFilter !== 'todos') {
                         url.searchParams.set('status', this.statusFilter);
                     }
-                    if (this.dateFilter) {
-                        url.searchParams.set('fecha', this.dateFilter);
+                    if (this.dateFrom) {
+                        url.searchParams.set('fecha_desde', this.dateFrom);
+                    }
+                    if (this.dateTo) {
+                        url.searchParams.set('fecha_hasta', this.dateTo);
                     }
                     if (this.coordinacionFilter) {
                         url.searchParams.set('coordinacion_id', this.coordinacionFilter);
@@ -1278,7 +1287,7 @@
         });
     </script>
     <footer class="mt-auto py-2 text-center text-xs text-gray-500">
-        Desarrollado por la División de Telemática
+© 2025 IMT - Desarrollado por la División de Telemática
     </footer>
     </div>
 </x-app-layout>
