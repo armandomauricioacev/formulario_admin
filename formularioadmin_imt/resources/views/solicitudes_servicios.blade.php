@@ -432,7 +432,7 @@
                         .btn-search:hover { background: #2563eb; }
 
                         .btn-clear-search {
-                            background: #ef4444;
+                            background: #6b7280; /* gris como btn-secondary */
                             color: #ffffff;
                             padding: 8px 12px;
                             border-radius: 6px;
@@ -442,7 +442,7 @@
                             font-weight: 500;
                             transition: background 0.2s ease;
                         }
-                        .btn-clear-search:hover { background: #dc2626; }
+                        .btn-clear-search:hover { background: #4b5563; }
                     </style>
 
                     <div x-data="solicitudesData()" x-init="initServerValues(); initScrollSync()"
@@ -495,8 +495,12 @@
                                         class="search-input"
                                     />
                                 </div>
-                                <button type="button" @click="clearSearch()" x-show="searchInput" class="btn-clear-search">
+                                <button type="button" @click="clearSearch()" x-show="searchInput" x-cloak class="btn-clear-search">
                                     Limpiar
+                                </button>
+                                <!-- Botón Filtros a la izquierda del botón Descargar -->
+                                <button type="button" class="btn-filter" @click="showFilters = !showFilters">
+                                    Filtros
                                 </button>
                                 <!-- Botón Descargar a la derecha de la barra de búsqueda -->
                                 <button type="button" class="btn-secondary" @click="openDownloadModal()">
@@ -507,11 +511,7 @@
                             <div class="counter-text">
                                 <span x-text="`Mostrando ${filteredCount} de ${totalAll}`"></span>
                             </div>
-                            <div>
-                                <button type="button" class="btn-filter" @click="showFilters = !showFilters">
-                                    Filtros
-                                </button>
-                            </div>
+                            
                         </div>
 
                         <div x-show="showFilters" x-cloak>
@@ -568,7 +568,7 @@
                                 <table class="data-table compact-table" x-ref="customTable">
                                     <thead>
                                         <tr>
-                                            <th>ID</th>
+                                            <th>Folio</th>
                                             <th>Nombre</th>
                                             <th>Teléfono</th>
                                             <th>Correo</th>
