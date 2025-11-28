@@ -605,9 +605,10 @@
                                                         x-show="solicitud.servicio_otro && solicitud.servicio_otro.trim().length > 0 && !solicitud.coordinacion_id"
                                                         @click="openAssignModal(solicitud)">Asignar</button>
 
-                                                    <!-- Marcar como Atendido mientras no esté revisado -->
+                                                    <!-- Marcar como Atendido mientras no esté revisado.
+                                                         Para servicio "Otro" se muestra solo si ya tiene coordinación asignada. -->
                                                     <button type="button" class="btn-primary" style="margin-right:8px"
-                                                        x-show="(solicitud.estatus || '').toLowerCase() !== 'revisado'"
+                                                        x-show="(solicitud.estatus || '').toLowerCase() !== 'revisado' && !(solicitud.servicio_otro && solicitud.servicio_otro.trim().length > 0 && !solicitud.coordinacion_id)"
                                                         @click="openReviewedModal(solicitud)">Atendido</button>
 
                                                     <!-- Revertir a Por Atender solo para "Otro" sin coordinación y que esté revisado -->
@@ -1046,6 +1047,11 @@
                 },
 
                 openReviewedModal(solicitud) {
+                    // Bloquear acción si es "Otro" y no tiene coordinación asignada
+                    if (solicitud.servicio_otro && solicitud.servicio_otro.trim().length > 0 && !solicitud.coordinacion_id) {
+                        alert('Para servicios "Otro", primero asigna una coordinación.');
+                        return;
+                    }
                     const nombre = `${solicitud.nombres} ${solicitud.apellido_paterno} ${solicitud.apellido_materno || ''}`.trim();
                     this.reviewedData = {
                         id: solicitud.id,
