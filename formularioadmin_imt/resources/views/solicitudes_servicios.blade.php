@@ -588,7 +588,10 @@
                                                 <td x-text="solicitud.nombres + ' ' + solicitud.apellido_paterno + ' ' + (solicitud.apellido_materno || '')"></td>
                                                 <td x-text="solicitud.telefono"></td>
                                                 <td x-text="solicitud.correo_electronico"></td>
-                                                <td x-text="(solicitud.entidad_procedencia && solicitud.entidad_procedencia.nombre) || solicitud.entidad_otra || 'N/A'"></td>
+                                                <td>
+                                                    <span x-text="(solicitud.entidad_procedencia && solicitud.entidad_procedencia.nombre) || solicitud.entidad_otra || 'N/A'"></span>
+                                                    <span x-show="solicitud.entidad_otra && solicitud.entidad_otra.trim().length > 0" class="service-badge">Otro</span>
+                                                </td>
                                                 <td>
                                                     <span x-text="(solicitud.servicio && solicitud.servicio.nombre) || solicitud.servicio_otro || 'N/A'"></span>
                                                     <span x-show="solicitud.servicio_otro" class="service-badge">Otro</span>
