@@ -831,6 +831,8 @@
                 successTitle: '',
                 successMessage: '',
                 showDownloadModal: false,
+                // Base absoluta robusta para subcarpetas (p.ej. /formularioadmin_imt)
+                baseUrl: '{{ url('/') }}',
 
                 initServerValues() {
                     const d = this.$el.dataset;
@@ -1015,7 +1017,7 @@
 
                     try {
                         const token = document.querySelector('meta[name=csrf-token]')?.getAttribute('content');
-                        const res = await fetch(`/solicitudes/${this.assignData.id}/asignar-coordinacion`, {
+                        const res = await fetch(`${this.baseUrl}/solicitudes/${this.assignData.id}/asignar-coordinacion`, {
                             method: 'PATCH',
                             headers: {
                                 'Content-Type': 'application/json',
@@ -1081,7 +1083,7 @@
                 async confirmReviewed() {
                     try {
                         const token = document.querySelector('meta[name=csrf-token]')?.getAttribute('content');
-                        const res = await fetch(`/solicitudes/${this.reviewedData.id}/revisado`, {
+                        const res = await fetch(`${this.baseUrl}/solicitudes/${this.reviewedData.id}/revisado`, {
                             method: 'PATCH',
                             headers: {
                                 'Content-Type': 'application/json',
@@ -1111,7 +1113,7 @@
                 async confirmInReview() {
                     try {
                         const token = document.querySelector('meta[name=csrf-token]')?.getAttribute('content');
-                        const res = await fetch(`/solicitudes/${this.inReviewData.id}/en_revision`, {
+                        const res = await fetch(`${this.baseUrl}/solicitudes/${this.inReviewData.id}/en_revision`, {
                             method: 'PATCH',
                             headers: {
                                 'Content-Type': 'application/json',
@@ -1257,7 +1259,7 @@
                 },
 
                 download(type) {
-                    const url = new URL(window.location.origin + `/solicitudes/export/` + (type === 'excel' ? 'excel' : 'pdf'));
+                    const url = new URL(`{{ url('/solicitudes/export') }}` + '/' + (type === 'excel' ? 'excel' : 'pdf'));
                     const q = String(this.searchInput || '').trim();
                     if (q) url.searchParams.set('search', q);
 
